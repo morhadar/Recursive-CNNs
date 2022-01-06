@@ -19,6 +19,8 @@ class corner_finder():
             self.model.cuda()
         self.model.eval()
 
+        print(f' model parameters: {model.count_parameters(self.model)}')
+
     def get_location(self, img, retainFactor=0.85):
         with torch.no_grad():
             ans_x = 0.0

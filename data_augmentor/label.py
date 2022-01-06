@@ -17,7 +17,7 @@ def onclick(event):
             spamwriter.writerow([str(event.xdata), str(event.ydata)])
 
 
-dir = "../data1/"
+dir = "/home/mhadar/projects/Recursive-CNNs/data1/"
 for image in os.listdir(dir):
     if image.endswith("jpg") or image.endswith("JPG"):
         if os.path.isfile(dir + image + ".csv"):

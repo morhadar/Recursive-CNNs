@@ -6,7 +6,7 @@ import random
 
 import cv2
 import numpy as np
-import Polygon
+# import Polygon
 
 def unison_shuffled_copies(a, b):
     assert len(a) == len(b)

@@ -13,6 +13,8 @@ class DatasetFactory:
     def get_dataset(directory, type="document"):
         if type=="document":
             return data.SmartDoc(directory)
+        elif type == "my_document":
+            return data.MyDatasetDoc(directory)
         elif type =="corner":
             return data.SmartDocCorner(directory)
         elif type=="CIFAR":

@@ -10,7 +10,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.autograd import Variable
-from torchnet.meter import confusionmeter
+# from torchnet.meter import confusionmeter
 from tqdm import tqdm
 
 logger = logging.getLogger('iCARL')

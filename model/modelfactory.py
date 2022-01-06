@@ -6,6 +6,9 @@ import model.resnet32 as resnet
 import model.cornerModel as tm
 import torchvision.models as models
 
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
 class ModelFactory():
     def __init__(self):
         pass
@@ -13,9 +16,9 @@ class ModelFactory():
     @staticmethod
     def get_model(model_type, dataset):
         if model_type == "resnet":
-            if dataset == 'document':
+            if dataset == 'document' or dataset == 'my_document':
                 return resnet.resnet20(8)
-            elif dataset == 'corner':
+            elif dataset == 'corner' or dataset  == 'my_corner':
                 return resnet.resnet20(2)
         if model_type == "resnet8":
             if dataset == 'document':

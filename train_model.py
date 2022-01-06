@@ -40,20 +40,31 @@ parser.add_argument('--log-interval', type=int, default=5, metavar='N',
                     help='how many batches to wait before logging training status')
 parser.add_argument('--model-type', default="resnet",
                     help='model type to be used. Example : resnet32, resnet20, densenet, test')
-parser.add_argument('--name', default="noname",
-                    help='Name of the experiment')
 parser.add_argument('--output-dir', default="../",
                     help='Directory to store the results; a new folder "DDMMYYYY" will be created '
                          'in the specified directory to save the results.')
 parser.add_argument('--decay', type=float, default=0.00001, help='Weight decay (L2 penalty).')
 parser.add_argument('--epochs', type=int, default=40, help='Number of epochs for trianing')
-parser.add_argument('--dataset', default="document", help='Dataset to be used; example document, corner')
+# parser.add_argument('--dataset', default="document", help='Dataset to be used; example document, corner')
 parser.add_argument('--loader', default="hdd", 
                     help='Loader to load data; hdd for reading from the hdd and ram for loading all data in the memory')
-parser.add_argument("-i", "--data-dirs", nargs='+', default="/Users/khurramjaved96/documentTest64",
-                    help="input Directory of train data")
-parser.add_argument("-v", "--validation-dirs", nargs='+', default="/Users/khurramjaved96/documentTest64",
-                    help="input Directory of val data")
+######################################################################################################################
+parser.add_argument('--name', default="noname", help='Name of the experiment')
+
+# document:
+# data_path = '/media/mhadar/d/data/RecursiveCNN_data/smartdocData_DocTrainC'; dataset_name = 'document'
+data_path = '/home/mhadar/projects/doc_scanner/data/data_generator/v1'; dataset_name = 'my_document'
+parser.add_argument('--dataset', default = dataset_name, help='Dataset to be used; example document, corner')
+parser.add_argument("-i", "--data-dirs", nargs='+', default = data_path, help="input Directory of train data")
+parser.add_argument("-v", "--validation-dirs", nargs='+', default = data_path, help="input Directory of val data")
+
+# corner:
+# data_path = "/media/mhadar/d/data/RecursiveCNN_data/cornerTrain64"; dataset_name = 'corner'
+# # data_path = "/home/mhadar/projects/doc_scanner/data/data_generator/v1_corner"; dataset_name = 'my_corner'
+# parser.add_argument('--dataset', default = dataset_name, help='Dataset to be used; example document, corner')
+# parser.add_argument("-i", "--data-dirs", nargs='+', default = data_path, help="input Directory of train data")
+# parser.add_argument("-v", "--validation-dirs", nargs='+', default = data_path, help="input Directory of val data")
+                    
 
 args = parser.parse_args()
 
@@ -65,8 +76,10 @@ logger = utils.utils.setup_logger(my_experiment.path)
 
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 
-dataset = dataprocessor.DatasetFactory.get_dataset(args.data_dirs, args.dataset)
+args.data_dirs = [args.data_dirs] #Todo - fix it!!!! why parse_args is not returning a list but a string?
+args.validation_dirs = [args.validation_dirs]
 
+dataset = dataprocessor.DatasetFactory.get_dataset(args.data_dirs, args.dataset)
 dataset_val = dataprocessor.DatasetFactory.get_dataset(args.validation_dirs, args.dataset)
 
 # Fix the seed.
@@ -86,10 +99,10 @@ kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 
 # Iterator to iterate over training data.
 train_iterator = torch.utils.data.DataLoader(train_dataset_loader,
-                                             batch_size=args.batch_size, shuffle=True, **kwargs)
+                                             batch_size=args.batch_size, shuffle=False, **kwargs)
 # Iterator to iterate over training data.
-val_iterator = torch.utils.data.DataLoader(val_dataset_loader,
-                                           batch_size=args.batch_size, shuffle=True, **kwargs)
+# val_iterator = torch.utils.data.DataLoader(val_dataset_loader,
+#                                            batch_size=args.batch_size, shuffle=False, **kwargs)
 
 # Get the required model
 myModel = model.ModelFactory.get_model(args.model_type, args.dataset)
@@ -140,7 +153,7 @@ for epoch in range(0, args.epochs):
     logger.info("Epoch : %d", epoch)
     my_trainer.update_lr(epoch, args.schedule, args.gammas)
     my_trainer.train(epoch)
-    my_eval.evaluate(my_trainer.model, val_iterator)
+    # my_eval.evaluate(my_trainer.model, val_iterator)
 
 torch.save(myModel.state_dict(), my_experiment.path + args.dataset + "_" + args.model_type+ ".pb")
 my_experiment.store_json()

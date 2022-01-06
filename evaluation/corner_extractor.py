@@ -18,10 +18,12 @@ class GetCorners:
             self.model.cuda()
         self.model.eval()
 
+        print(f' model parameters: {model.count_parameters(self.model)}')
+
     def get(self, pil_image):
         with torch.no_grad():
             image_array = np.copy(pil_image)
-            pil_image = Image.fromarray(pil_image)
+            pil_image = Image.fromarray(pil_image) #TODO - why???
             test_transform = transforms.Compose([transforms.Resize([32, 32]),
                                                  transforms.ToTensor()])
             img_temp = test_transform(pil_image)
@@ -32,7 +34,7 @@ class GetCorners:
 
             model_prediction = self.model(img_temp).cpu().data.numpy()[0]
 
-            model_prediction = np.array(model_prediction)
+            model_prediction = np.array(model_prediction) #model return normalized coordinates
 
             x_cords = model_prediction[[0, 2, 4, 6]]
             y_cords = model_prediction[[1, 3, 5, 7]]
@@ -41,7 +43,6 @@ class GetCorners:
             y_cords = y_cords * image_array.shape[0]
 
             # Extract the four corners of the image. Read "Region Extractor" in Section III of the paper for an explanation.
-
             top_left = image_array[
                        max(0, int(2 * y_cords[0] - (y_cords[3] + y_cords[0]) / 2)):int((y_cords[3] + y_cords[0]) / 2),
                        max(0, int(2 * x_cords[0] - (x_cords[1] + x_cords[0]) / 2)):int((x_cords[1] + x_cords[0]) / 2)]
@@ -60,7 +61,8 @@ class GetCorners:
                 y_cords[3] + (y_cords[3] - y_cords[0]) / 2)),
                           max(0, int(2 * x_cords[3] - (x_cords[2] + x_cords[3]) / 2)):int(
                               (x_cords[3] + x_cords[2]) / 2)]
-
+            
+            #concatenate crop of image containing the corner with corner's top-left coordinates (with respect to full frame).
             top_left = (top_left, max(0, int(2 * x_cords[0] - (x_cords[1] + x_cords[0]) / 2)),
                         max(0, int(2 * y_cords[0] - (y_cords[3] + y_cords[0]) / 2)))
             top_right = (
