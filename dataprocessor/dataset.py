@@ -62,7 +62,7 @@ class MyDatasetDoc(Dataset):
     '''
     '''
     def __init__(self, directories=[]):
-        gt_colunms = ['im_name', 'topleft_x', 'topleft_y', 'topright_x', 'topright_y', 'botright_x', 'botright_y', 'botleft_x', 'botleft_y', 'w', 'h']
+        gt_colunms = ['im_name', 'topleft_x', 'topleft_y', 'topright_x', 'topright_y', 'botright_x', 'botright_y', 'botleft_x', 'botleft_y', 'w', 'h', 'ignore']
         self.train_transform = transforms.Compose([transforms.Resize([32, 32]),
                                                     transforms.ColorJitter(1.5, 1.5, 0.9, 0.5),
                                                     transforms.ToTensor()])
@@ -76,15 +76,15 @@ class MyDatasetDoc(Dataset):
         print (d, "gt.csv")
         with open(os.path.join(d, "gt.csv"), 'r') as csvfile:
             df = pd.read_csv(f'{d}/gt.csv', names=gt_colunms)
+            df = df.drop(df[df.ignore == 1].index)
             self.data = list(d +'/'+ df.im_name)
             df[['topleft_x', 'topright_x', 'botright_x', 'botleft_x']] = df[['topleft_x', 'topright_x', 'botright_x', 'botleft_x']].div(df.w, axis=0)
             df[['topleft_y', 'topright_y', 'botright_y', 'botleft_y']] = df[['topleft_y', 'topright_y', 'botright_y', 'botleft_y']].div(df.h, axis=0)
-            self.labels = df.drop(['im_name', 'w', 'h'],axis=1).to_numpy()
+            self.labels = df.drop(['im_name', 'w', 'h', 'ignore'],axis=1).to_numpy()
         self.myData = [self.data, self.labels]
         
         logger.debug("Ground Truth Shape: %s", str(self.labels.shape))
         logger.debug("Data shape %s", str(len(self.data)))
-
 
 class SmartDocDirectories(Dataset):
     '''

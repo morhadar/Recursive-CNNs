@@ -11,6 +11,13 @@ class DataMyDatasetDocTestCase(unittest.TestCase):
         assert ds.myData[1].shape[1] == 8
         assert len(ds.myData[0]) == len(ds.myData[1])
     
+    def test_MyDataset_sandbox(self):
+        ds = MyDatasetDoc('/home/mhadar/projects/doc_scanner/data/data_generator/sandbox')
+        assert isinstance(ds.myData[0], list)
+        assert ds.myData[1].shape[1] == 8
+        assert len(ds.myData[0]) == 7
+        assert len(ds.myData[1]) == 7
+    
     def test_init_SmartDoc(self):
         ds = SmartDoc()
 

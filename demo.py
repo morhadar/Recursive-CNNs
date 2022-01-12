@@ -18,10 +18,10 @@ def args_processor():
                         default="0.85")
     parser.add_argument("-cm", "--cornerModel", help="Model for corner point refinement",
                         # default="../cornerModelWell")
-                        default="results/26122021/noname_8/nonamecorner_resnet.pb")
+                        default="results/trained_models/corner/26122021_corner_smartdoc/nonamecorner_resnet.pb")
     parser.add_argument("-dm", "--documentModel", help="Model for document corners detection",
                         # default="../documentModelWell")
-                        default="results/22122021/noname_2/nonamedocument_resnet.pb")
+                        default="results/trained_models/document/22122021_document_smartdoc/nonamedocument_resnet.pb")
     return parser.parse_args()
 
 def draw_points(points: list, im):

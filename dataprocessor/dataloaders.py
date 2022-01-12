@@ -32,6 +32,10 @@ class HddLoader(td.Dataset):
         assert (index < len(self.data[0]))
         assert (index < self.len)
         img = Image.open(self.data[0][index])
+        if img.mode == 'L':
+            # print(self.data[0][index])
+            # print(np.array(img).shape)
+            img = img.convert('RGB')
         target = self.data[1][index]
         if self.transform is not None:
             img = self.transform(img)

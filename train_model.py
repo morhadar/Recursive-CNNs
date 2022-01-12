@@ -40,7 +40,7 @@ parser.add_argument('--log-interval', type=int, default=5, metavar='N',
                     help='how many batches to wait before logging training status')
 parser.add_argument('--model-type', default="resnet",
                     help='model type to be used. Example : resnet32, resnet20, densenet, test')
-parser.add_argument('--output-dir', default="../",
+parser.add_argument('--output-dir', default="results/",
                     help='Directory to store the results; a new folder "DDMMYYYY" will be created '
                          'in the specified directory to save the results.')
 parser.add_argument('--decay', type=float, default=0.00001, help='Weight decay (L2 penalty).')
@@ -52,8 +52,8 @@ parser.add_argument('--loader', default="hdd",
 parser.add_argument('--name', default="noname", help='Name of the experiment')
 
 # document:
-# data_path = '/media/mhadar/d/data/RecursiveCNN_data/smartdocData_DocTrainC'; dataset_name = 'document'
-data_path = '/home/mhadar/projects/doc_scanner/data/data_generator/v1'; dataset_name = 'my_document'
+# data_path = '/media/mhadar/d/data/RecursiveCNN_data/smartdocData_DocTrainC'; dataset_name = 'document'; batch_size=32
+data_path = '/home/mhadar/projects/doc_scanner/data/data_generator/v1'; dataset_name = 'my_document'; batch_size=32
 parser.add_argument('--dataset', default = dataset_name, help='Dataset to be used; example document, corner')
 parser.add_argument("-i", "--data-dirs", nargs='+', default = data_path, help="input Directory of train data")
 parser.add_argument("-v", "--validation-dirs", nargs='+', default = data_path, help="input Directory of val data")
@@ -68,13 +68,13 @@ parser.add_argument("-v", "--validation-dirs", nargs='+', default = data_path, h
 
 args = parser.parse_args()
 
-# Define an experiment.
-my_experiment = ex.experiment(args.name, args, args.output_dir)
+args.batch_size = batch_size
 
-# Add logging support
+my_experiment = ex.experiment(args.name, args, args.output_dir)
 logger = utils.utils.setup_logger(my_experiment.path)
 
 args.cuda = not args.no_cuda and torch.cuda.is_available()
+kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 
 args.data_dirs = [args.data_dirs] #Todo - fix it!!!! why parse_args is not returning a list but a string?
 args.validation_dirs = [args.validation_dirs]
@@ -88,23 +88,18 @@ torch.manual_seed(seed)
 if args.cuda:
     torch.cuda.manual_seed(seed)
 
-train_dataset_loader = dataprocessor.LoaderFactory.get_loader(args.loader, dataset.myData,
+train_dataset_loader = dataprocessor.LoaderFactory.get_loader(args.loader,
+                                                              dataset.myData,
                                                               transform=dataset.train_transform,
                                                               cuda=args.cuda)
-# Loader used for training data
-val_dataset_loader = dataprocessor.LoaderFactory.get_loader(args.loader, dataset_val.myData,
+val_dataset_loader = dataprocessor.LoaderFactory.get_loader(args.loader, 
+                                                            dataset_val.myData,
                                                             transform=dataset.test_transform,
                                                             cuda=args.cuda)
-kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 
-# Iterator to iterate over training data.
-train_iterator = torch.utils.data.DataLoader(train_dataset_loader,
-                                             batch_size=args.batch_size, shuffle=False, **kwargs)
-# Iterator to iterate over training data.
-# val_iterator = torch.utils.data.DataLoader(val_dataset_loader,
-#                                            batch_size=args.batch_size, shuffle=False, **kwargs)
+train_iterator = torch.utils.data.DataLoader(train_dataset_loader, batch_size=args.batch_size, shuffle=False, drop_last=True, **kwargs)
+# val_iterator = torch.utils.data.DataLoader(val_dataset_loader, batch_size=args.batch_size, shuffle=False, **kwargs)
 
-# Get the required model
 myModel = model.ModelFactory.get_model(args.model_type, args.dataset)
 if args.cuda:
     myModel.cuda()
@@ -138,17 +133,14 @@ if args.pretrain:
             logger.info(name)
         counter += 1
 
-# Define the optimizer used in the experiment
 optimizer = torch.optim.SGD(filter(lambda p: p.requires_grad, myModel.parameters()), args.lr,
                             momentum=args.momentum,
                             weight_decay=args.decay, nesterov=True)
 
-# Trainer object used for training
 my_trainer = trainer.Trainer(train_iterator, myModel, args.cuda, optimizer)
-
-# Evaluator
 my_eval = trainer.EvaluatorFactory.get_evaluator("rmse", args.cuda)
-# Running epochs_class epochs
+
+
 for epoch in range(0, args.epochs):
     logger.info("Epoch : %d", epoch)
     my_trainer.update_lr(epoch, args.schedule, args.gammas)

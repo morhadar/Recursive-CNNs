@@ -49,7 +49,7 @@ class Trainer(GenericTrainer):
         lossAvg = None
         for img, target in tqdm(self.train_iterator):
             if self.cuda:
-                img, target = img.cuda(), target.cuda() #TODO - it is already on the cuda
+                img, target = img.cuda(), target.cuda() #TODO - isn't it already in cuda?
             self.optimizer.zero_grad()
             response = self.model(Variable(img))
             # print (response[0])
