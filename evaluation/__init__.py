@@ -2,5 +2,4 @@
  Maintainer : Khurram Javed
  Email : kjaved@ualberta.ca '''
 
-import evaluation.corner_extractor
-import evaluation.corner_refiner
+from evaluation import corner_extractor, corner_refiner

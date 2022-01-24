@@ -3,6 +3,7 @@
  Email : kjaved@ualberta.ca '''
 
 import csv
+import pandas as pd
 import logging
 import os
 import xml.etree.ElementTree as ET
@@ -20,7 +21,7 @@ logger = logging.getLogger('iCARL')
 
 class Dataset():
     ''' Base class to represent a Dataset
-    data - list of strings
+    data - list of strings. paths to images. N is the number of files.
     labels - np array Nx8 (topleft_x, topleft_y, topright_x, topright_y, botleft_x, botleft_y, botright_x, botright_y). normalized coordinated.
     '''
 
@@ -28,6 +29,10 @@ class Dataset():
         self.name = name
         self.data = []
         self.labels = []
+    
+    def __repr__(self) -> None:
+        logger.debug("Ground Truth Shape: %s", str(self.labels.shape))
+        logger.debug("Data shape %s", str(len(self.data)))
 
 class SmartDoc(Dataset):
     '''
@@ -54,37 +59,66 @@ class SmartDoc(Dataset):
                     labels.append(ast.literal_eval(test))
         labels = np.reshape(np.array(labels), (-1, 8))
         self.myData = [data, labels]
+
+        self.data = data #TODO: delete this once get rid of the those redundant members
+        self.labels = labels
         
-        logger.debug("Ground Truth Shape: %s", str(labels.shape))
-        logger.debug("Data shape %s", str(len(data)))
+        self.__repr__()
 
 class MyDatasetDoc(Dataset):
     '''
+    data - list of strings. path to images. N is the number of files.
+    labels - np array Nx8 (topleft_x, topleft_y, topright_x, topright_y, botleft_x, botleft_y, botright_x, botright_y). normalized coordinated.
     '''
     def __init__(self, directories=[]):
-        gt_colunms = ['im_name', 'topleft_x', 'topleft_y', 'topright_x', 'topright_y', 'botright_x', 'botright_y', 'botleft_x', 'botleft_y', 'w', 'h', 'ignore']
+        gt_colunms = ['img_name', 'topleft_x', 'topleft_y', 'topright_x', 'topright_y', 'botright_x', 'botright_y', 'botleft_x', 'botleft_y', 'w', 'h', 'ignore']
         self.train_transform = transforms.Compose([transforms.Resize([32, 32]),
                                                     transforms.ColorJitter(1.5, 1.5, 0.9, 0.5),
                                                     transforms.ToTensor()])
 
         self.test_transform = transforms.Compose([transforms.Resize([32, 32]),
                                                     transforms.ToTensor()])
-        logger.info("Pass train/test data paths here")
         directories = [directories] if isinstance(directories, str) else directories
-        import pandas as pd
+        
         d = directories[0] #TODO - generalize to take any number of directories
         print (d, "gt.csv")
         with open(os.path.join(d, "gt.csv"), 'r') as csvfile:
             df = pd.read_csv(f'{d}/gt.csv', names=gt_colunms)
             df = df.drop(df[df.ignore == 1].index)
-            self.data = list(d +'/'+ df.im_name)
+            self.data = list(d +'/'+ df.img_name)
             df[['topleft_x', 'topright_x', 'botright_x', 'botleft_x']] = df[['topleft_x', 'topright_x', 'botright_x', 'botleft_x']].div(df.w, axis=0)
             df[['topleft_y', 'topright_y', 'botright_y', 'botleft_y']] = df[['topleft_y', 'topright_y', 'botright_y', 'botleft_y']].div(df.h, axis=0)
-            self.labels = df.drop(['im_name', 'w', 'h', 'ignore'],axis=1).to_numpy()
+            self.labels = df.drop(['img_name', 'w', 'h', 'ignore'],axis=1).to_numpy()
         self.myData = [self.data, self.labels]
         
-        logger.debug("Ground Truth Shape: %s", str(self.labels.shape))
-        logger.debug("Data shape %s", str(len(self.data)))
+        self.__repr__()
+
+class MyDatasetCorner(Dataset):
+    '''
+    data - list of strings. path to images. N is the number of files.
+    labels - np array Nx2 (x, y). normalized coordinated.
+    '''
+    def __init__(self, directories=[]):
+        gt_colunms = ['img_name', 'corner_type', 'x', 'y', 'w', 'h', 'ignore']
+        self.train_transform = transforms.Compose([transforms.Resize([32, 32]),
+                                                    transforms.ColorJitter(0.5, 0.5, 0.5, 0.5),
+                                                    transforms.ToTensor()])
+
+        self.test_transform = transforms.Compose([transforms.Resize([32, 32]),
+                                                      transforms.ToTensor()])
+        directories = [directories] if isinstance(directories, str) else directories
+        d = directories[0] #TODO - generalize to take any number of directories
+        print (d, "gt.csv")
+        with open(os.path.join(d, "gt.csv"), 'r') as csvfile:
+            df = pd.read_csv(f'{d}/gt.csv', names=gt_colunms)
+            df = df.drop(df[df.ignore == 1].index)
+            self.data = list(d +'/'+ df.img_name)
+            df[['x']] = df[['x']].div(df.w, axis=0)
+            df[['y']] = df[['y']].div(df.h, axis=0)
+            self.labels = df.drop(['img_name', 'corner_type', 'w', 'h', 'ignore'],axis=1).to_numpy()
+        self.myData = [self.data, self.labels]
+        
+        self.__repr__()
 
 class SmartDocDirectories(Dataset):
     '''
@@ -133,14 +167,12 @@ class SmartDocDirectories(Dataset):
                                 self.labels.append(ground_truth)
 
         self.labels = np.array(self.labels)
-
         self.labels = np.reshape(self.labels, (-1, 8))
-        logger.debug("Ground Truth Shape: %s", str(self.labels.shape))
-        logger.debug("Data shape %s", str(len(self.data)))
-
         self.myData = []
         for a in range(len(self.data)):
             self.myData.append([self.data[a], self.labels[a]])
+        
+        self.__repr__()
 
 class SelfCollectedDataset(Dataset):
     '''
@@ -171,25 +203,24 @@ class SelfCollectedDataset(Dataset):
                         self.data.append(img_path)
 
         self.labels = np.array(self.labels)
-
         self.labels = np.reshape(self.labels, (-1, 8))
-        logger.debug("Ground Truth Shape: %s", str(self.labels.shape))
-        logger.debug("Data shape %s", str(len(self.data)))
-
         self.myData = []
         for a in range(len(self.data)):
             self.myData.append([self.data[a], self.labels[a]])
 
+        self.__repr__()
+
 class SmartDocCorner(Dataset):
     '''
-    Class to include MNIST specific details
+    data - list of strings. path to images. N is the number of files.
+    labels - np array Nx2 (x, y). normalized coordinated.
     '''
 
-    def __init__(self, directory="data"):
+    def __init__(self, directories=[]):
         super().__init__("smartdoc")
         self.data = []
         self.labels = []
-        for d in directory:
+        for d in directories:
             self.directory = d
             self.train_transform = transforms.Compose([transforms.Resize([32, 32]),
                                                        transforms.ColorJitter(0.5, 0.5, 0.5, 0.5),
@@ -199,8 +230,6 @@ class SmartDocCorner(Dataset):
                                                       transforms.ToTensor()])
 
             logger.info("Pass train/test data paths here")
-
-            self.classes_list = {}
 
             file_names = []
             with open(os.path.join(self.directory, "gt.csv"), 'r') as csvfile:
@@ -212,9 +241,8 @@ class SmartDocCorner(Dataset):
                     test = row[1].replace("array", "")
                     self.labels.append((ast.literal_eval(test)))
         self.labels = np.array(self.labels)
-
         self.labels = np.reshape(self.labels, (-1, 2))
-        logger.debug("Ground Truth Shape: %s", str(self.labels.shape))
-        logger.debug("Data shape %s", str(len(self.data)))
 
         self.myData = [self.data, self.labels]
+        
+        self.__repr__()

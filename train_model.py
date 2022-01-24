@@ -2,10 +2,10 @@
  Maintainer : Khurram Javed
  Email : kjaved@ualberta.ca '''
 
-from __future__ import print_function
+# from __future__ import print_function
 
 import argparse
-
+from tqdm import tqdm
 import torch
 import torch.utils.data as td
 
@@ -52,18 +52,18 @@ parser.add_argument('--loader', default="hdd",
 parser.add_argument('--name', default="noname", help='Name of the experiment')
 
 # document:
-# data_path = '/media/mhadar/d/data/RecursiveCNN_data/smartdocData_DocTrainC'; dataset_name = 'document'; batch_size=32
-data_path = '/home/mhadar/projects/doc_scanner/data/data_generator/v1'; dataset_name = 'my_document'; batch_size=32
-parser.add_argument('--dataset', default = dataset_name, help='Dataset to be used; example document, corner')
-parser.add_argument("-i", "--data-dirs", nargs='+', default = data_path, help="input Directory of train data")
-parser.add_argument("-v", "--validation-dirs", nargs='+', default = data_path, help="input Directory of val data")
-
-# corner:
-# data_path = "/media/mhadar/d/data/RecursiveCNN_data/cornerTrain64"; dataset_name = 'corner'
-# # data_path = "/home/mhadar/projects/doc_scanner/data/data_generator/v1_corner"; dataset_name = 'my_corner'
+# # data_path = '/media/mhadar/d/data/RecursiveCNN_data/smartdocData_DocTrainC'; dataset_name = 'document'; batch_size=32
+# data_path = '/home/mhadar/projects/doc_scanner/data/data_generator/v1'; dataset_name = 'my_document'; batch_size=32
 # parser.add_argument('--dataset', default = dataset_name, help='Dataset to be used; example document, corner')
 # parser.add_argument("-i", "--data-dirs", nargs='+', default = data_path, help="input Directory of train data")
 # parser.add_argument("-v", "--validation-dirs", nargs='+', default = data_path, help="input Directory of val data")
+
+# corner:
+# data_path = "/media/mhadar/d/data/RecursiveCNN_data/cornerTrain64"; dataset_name = 'corner'; batch_size=32
+data_path = "/home/mhadar/projects/doc_scanner/data/data_generator/v1_corners"; dataset_name = 'my_corner'; batch_size=32
+parser.add_argument('--dataset', default = dataset_name, help='Dataset to be used; example document, corner')
+parser.add_argument("-i", "--data-dirs", nargs='+', default = data_path, help="input Directory of train data")
+parser.add_argument("-v", "--validation-dirs", nargs='+', default = data_path, help="input Directory of val data")
                     
 
 args = parser.parse_args()
@@ -74,7 +74,7 @@ my_experiment = ex.experiment(args.name, args, args.output_dir)
 logger = utils.utils.setup_logger(my_experiment.path)
 
 args.cuda = not args.no_cuda and torch.cuda.is_available()
-kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
+kwargs = {'num_workers': 8, 'pin_memory': True} if args.cuda else {}
 
 args.data_dirs = [args.data_dirs] #Todo - fix it!!!! why parse_args is not returning a list but a string?
 args.validation_dirs = [args.validation_dirs]
@@ -116,7 +116,7 @@ if args.pretrain:
     # Trainer object used for training
     cifar_trainer = trainer.CIFARTrainer(train_iterator_cifar, myModel, args.cuda, cifar_optimizer)
 
-    for epoch in range(0, 70):
+    for epoch in tqdm(range(0, 70)):
         logger.info("Epoch : %d", epoch)
         cifar_trainer.update_lr(epoch, [30, 45, 60], args.gammas)
         cifar_trainer.train(epoch)
