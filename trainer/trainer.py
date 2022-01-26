@@ -66,6 +66,7 @@ class Trainer(GenericTrainer):
 
         lossAvg /= len(self.train_iterator)
         logger.info("Avg Loss %s", str((lossAvg).cpu().data.numpy()))
+        return lossAvg
 
 
 class CIFARTrainer(GenericTrainer):

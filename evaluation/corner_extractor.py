@@ -2,6 +2,7 @@
  Maintainer : Khurram Javed
  Email : kjaved@ualberta.ca '''
 
+from abc import abstractmethod
 import numpy as np
 import torch
 from PIL import Image
@@ -10,7 +11,7 @@ from torchvision import transforms
 import model
 
 
-class GetCorners:
+class CornerExtractor():
     def __init__(self, checkpoint_dir):
         self.model = model.ModelFactory.get_model("resnet", 'document')
         self.model.load_state_dict(torch.load(checkpoint_dir, map_location='cpu'))
@@ -21,9 +22,9 @@ class GetCorners:
         print(f' model parameters: {model.count_parameters(self.model)}')
 
     def get(self, pil_image):
-        with torch.no_grad():
+        with torch.no_grad(): 
             image_array = np.copy(pil_image)
-            pil_image = Image.fromarray(pil_image) #TODO - why???
+            # pil_image = Image.fromarray(pil_image) #TODO - why???
             test_transform = transforms.Compose([transforms.Resize([32, 32]),
                                                  transforms.ToTensor()])
             img_temp = test_transform(pil_image)
@@ -72,3 +73,17 @@ class GetCorners:
                            int((y_cords[0] + y_cords[3]) / 2))
 
             return top_left, top_right, bottom_right, bottom_left
+    
+    @staticmethod
+    def find_coarse_corner_estimation(corners):
+        """ 
+        each corner is a list of: [np.array of the corner, topleft_x, topleft_y]. 
+        where topleft_x, topleft_y are with respect to full resolution image 
+        """
+        def _cvt_corner(corner):
+            h,w = corner[0].shape[:2]
+            x = int(corner[1] + w/2)
+            y = int(corner[2] + h/2)
+            return [x,y]
+        return [_cvt_corner(corners[0]), _cvt_corner(corners[1]), _cvt_corner(corners[2]), _cvt_corner(corners[3])]
+

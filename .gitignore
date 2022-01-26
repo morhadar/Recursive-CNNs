@@ -7,3 +7,8 @@ __pycache__/
 
 results
 data
+runs
+
+# soft links to my other projects:
+references
+z_ref_doc_scanner

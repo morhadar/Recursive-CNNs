@@ -2,12 +2,11 @@
  Maintainer : Khurram Javed
  Email : kjaved@ualberta.ca '''
 
-# from __future__ import print_function
 
 import argparse
 from tqdm import tqdm
 import torch
-import torch.utils.data as td
+# import torch.utils.data as td
 
 import dataprocessor
 import experiment as ex
@@ -67,6 +66,8 @@ parser.add_argument("-v", "--validation-dirs", nargs='+', default = data_path, h
                     
 
 args = parser.parse_args()
+from torch.utils.tensorboard import SummaryWriter
+writer = SummaryWriter()
 
 args.batch_size = batch_size
 
@@ -144,7 +145,8 @@ my_eval = trainer.EvaluatorFactory.get_evaluator("rmse", args.cuda)
 for epoch in range(0, args.epochs):
     logger.info("Epoch : %d", epoch)
     my_trainer.update_lr(epoch, args.schedule, args.gammas)
-    my_trainer.train(epoch)
+    lossAvg = my_trainer.train(epoch)
+    writer.add_scalar('loss', lossAvg, epoch)
     # my_eval.evaluate(my_trainer.model, val_iterator)
 
 torch.save(myModel.state_dict(), my_experiment.path + args.dataset + "_" + args.model_type+ ".pb")

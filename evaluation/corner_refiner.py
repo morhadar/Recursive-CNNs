@@ -10,7 +10,7 @@ from torchvision import transforms
 import model
 
 
-class corner_finder():
+class CornerRefiner():
     def __init__(self, CHECKPOINT_DIR):
 
         self.model = model.ModelFactory.get_model("resnet", "corner")
