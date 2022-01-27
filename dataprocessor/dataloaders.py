@@ -11,7 +11,7 @@ from PIL import Image
 
 logger = logging.getLogger('iCARL')
 
-
+#TODO - refactor code to include this inside dataset class.
 class HddLoader(td.Dataset):
     def __init__(self, data, transform=None, cuda=False):
         self.data = data

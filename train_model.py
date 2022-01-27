@@ -6,9 +6,10 @@
 import argparse
 from tqdm import tqdm
 import torch
-# import torch.utils.data as td
+import torch.utils.data as td
 
 import dataprocessor
+from dataprocessor.dataset import MyDatasetCorner, MyDatasetDoc
 import experiment as ex
 import model
 import trainer
@@ -69,37 +70,36 @@ args = parser.parse_args()
 from torch.utils.tensorboard import SummaryWriter
 writer = SummaryWriter()
 
-args.batch_size = batch_size
+# args.batch_size = batch_size
 
 my_experiment = ex.experiment(args.name, args, args.output_dir)
 logger = utils.utils.setup_logger(my_experiment.path)
 
 args.cuda = not args.no_cuda and torch.cuda.is_available()
-kwargs = {'num_workers': 8, 'pin_memory': True} if args.cuda else {}
-
-args.data_dirs = [args.data_dirs] #Todo - fix it!!!! why parse_args is not returning a list but a string?
-args.validation_dirs = [args.validation_dirs]
-
-dataset = dataprocessor.DatasetFactory.get_dataset(args.data_dirs, args.dataset)
-dataset_val = dataprocessor.DatasetFactory.get_dataset(args.validation_dirs, args.dataset)
-
+kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 # Fix the seed.
 seed = args.seed
 torch.manual_seed(seed)
 if args.cuda:
     torch.cuda.manual_seed(seed)
 
-train_dataset_loader = dataprocessor.LoaderFactory.get_loader(args.loader,
-                                                              dataset.myData,
-                                                              transform=dataset.train_transform,
-                                                              cuda=args.cuda)
-val_dataset_loader = dataprocessor.LoaderFactory.get_loader(args.loader, 
-                                                            dataset_val.myData,
-                                                            transform=dataset.test_transform,
-                                                            cuda=args.cuda)
+args.data_dirs = [args.data_dirs] #Todo - fix it!!!! why parse_args is not returning a list but a string?
+args.validation_dirs = [args.validation_dirs]
 
-train_iterator = torch.utils.data.DataLoader(train_dataset_loader, batch_size=args.batch_size, shuffle=False, drop_last=True, **kwargs)
-# val_iterator = torch.utils.data.DataLoader(val_dataset_loader, batch_size=args.batch_size, shuffle=False, **kwargs)
+if args.dataset in ['document', 'corner']: #ugly hack to support old code. #TODO - get rid of it
+    training_data = dataprocessor.DatasetFactory.get_dataset(args.data_dirs, args.dataset)
+    testing_data  = dataprocessor.DatasetFactory.get_dataset(args.validation_dirs, args.dataset)
+    train_dataset = dataprocessor.LoaderFactory.get_loader(args.loader, training_data.myData, transform=training_data.train_transform, cuda=args.cuda)
+    test_dataset  = dataprocessor.LoaderFactory.get_loader(args.loader, testing_data.myData,  transform=training_data.test_transform,  cuda=args.cuda)
+else:
+    if args.dataset == 'my_document':
+        train_dataset = MyDatasetDoc(args.data_dirs)
+    if args.dataset == 'my_corner':
+        train_dataset = MyDatasetCorner(args.data_dirs)
+
+
+train_dataloader = td.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=False, drop_last=True, **kwargs)
+# test_dataloader  = td.DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, drop_last=True, **kwargs) #TODO - enabel test!!!!!
 
 myModel = model.ModelFactory.get_model(args.model_type, args.dataset)
 if args.cuda:
@@ -138,7 +138,7 @@ optimizer = torch.optim.SGD(filter(lambda p: p.requires_grad, myModel.parameters
                             momentum=args.momentum,
                             weight_decay=args.decay, nesterov=True)
 
-my_trainer = trainer.Trainer(train_iterator, myModel, args.cuda, optimizer)
+my_trainer = trainer.Trainer(train_dataloader, myModel, args.cuda, optimizer)
 my_eval = trainer.EvaluatorFactory.get_evaluator("rmse", args.cuda)
 
 
@@ -146,7 +146,7 @@ for epoch in range(0, args.epochs):
     logger.info("Epoch : %d", epoch)
     my_trainer.update_lr(epoch, args.schedule, args.gammas)
     lossAvg = my_trainer.train(epoch)
-    writer.add_scalar('loss', lossAvg, epoch)
+    # writer.add_scalar('loss', lossAvg, epoch) #note it slows down the training. Specially the first epoch but not only.
     # my_eval.evaluate(my_trainer.model, val_iterator)
 
 torch.save(myModel.state_dict(), my_experiment.path + args.dataset + "_" + args.model_type+ ".pb")

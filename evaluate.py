@@ -10,29 +10,32 @@ sys.path.append(os.path.abspath('z_ref_doc_scanner'))  #TODO - why importing fai
 from z_ref_doc_scanner.dataset import Dataset
 from z_ref_doc_scanner.utils import draw_qudrilateral, IOU
 
-v0 = [  'results/trained_models/document/22122021_document_smartdoc/nonamedocument_resnet.pb',
+v0 = [  'v0',
+        'results/trained_models/document/22122021_document_smartdoc/nonamedocument_resnet.pb',
         'results/trained_models/corner/26122021_corner_smartdoc/nonamecorner_resnet.pb'
         ]
 
-v1 = [  'results/trained_models/document/1212022_document_v1/nonamemy_document_resnet.pb',
+v1 = [  'v1',
+        'results/trained_models/document/1212022_document_v1/nonamemy_document_resnet.pb',
         'results/trained_models/corner/17122022_corner_mycorners/nonamemy_corner_resnet.pb'
         ]
 
 if __name__ == '__main__':
-    v = v1
-    output_path = 'results/v1/high'
+    v = v0
+    data_type = 'high'
+    output_path = f'results/{v[0]}/{data_type}'
     img_suffix = ''
-    data_dir = 'z_ref_doc_scanner/data/self_collected/high-level-camera/stills/'
+    data_dir = f'z_ref_doc_scanner/data/self_collected/{data_type}-level-camera/stills/'
     
     os.makedirs(output_path, exist_ok=True)
     
-    ds = Dataset(data_dir)
+    ds = Dataset(data_dir, ignore=True)
     iou = []
     for i in range(len(ds)):
         im, quad_true = ds.readimage(i)
         img_name = ds.get_name(i)
         
-        qf = QudrilateralFinder(v[0], v[1])
+        qf = QudrilateralFinder(v[1], v[2])
         quad_pred = qf.find_qudrilateral(im)
         
         oim = Image.fromarray(draw_qudrilateral(quad_pred, np.array(im)))

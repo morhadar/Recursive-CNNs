@@ -7,9 +7,10 @@ import pandas as pd
 import logging
 import os
 import xml.etree.ElementTree as ET
-
+from PIL import Image
 import numpy as np
 from torchvision import transforms
+from torch.utils.data import Dataset
 
 import utils.utils as utils
 
@@ -19,7 +20,7 @@ import utils.utils as utils
 logger = logging.getLogger('iCARL')
 
 
-class Dataset():
+class DatasetBase():
     ''' Base class to represent a Dataset
     data - list of strings. paths to images. N is the number of files.
     labels - np array Nx8 (topleft_x, topleft_y, topright_x, topright_y, botleft_x, botleft_y, botright_x, botright_y). normalized coordinated.
@@ -34,7 +35,7 @@ class Dataset():
         logger.debug("Ground Truth Shape: %s", str(self.labels.shape))
         logger.debug("Data shape %s", str(len(self.data)))
 
-class SmartDoc(Dataset):
+class SmartDoc(DatasetBase):
     '''
     '''
     def __init__(self, directories=[]):
@@ -90,8 +91,19 @@ class MyDatasetDoc(Dataset):
             df[['topleft_y', 'topright_y', 'botright_y', 'botleft_y']] = df[['topleft_y', 'topright_y', 'botright_y', 'botleft_y']].div(df.h, axis=0)
             self.labels = df.drop(['img_name', 'w', 'h', 'ignore'],axis=1).to_numpy()
         self.myData = [self.data, self.labels]
-        
+
         self.__repr__()
+
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, index):
+        img = Image.open(self.data[index])
+        img = img.convert('RGB') if img.mode == 'L' else img
+        if self.train_transform is not None:
+            img = self.train_transform(img)
+        target = self.labels[index]
+        return img, target
 
 class MyDatasetCorner(Dataset):
     '''
@@ -119,8 +131,19 @@ class MyDatasetCorner(Dataset):
         self.myData = [self.data, self.labels]
         
         self.__repr__()
+    
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, index):
+        img = Image.open(self.data[index])
+        img = img.convert('RGB') if img.mode == 'L' else img
+        if self.train_transform is not None:
+            img = self.train_transform(img)
+        target = self.labels[index]
+        return img, target
 
-class SmartDocDirectories(Dataset):
+class SmartDocDirectories(DatasetBase):
     '''
     Class to include MNIST specific details
     '''
@@ -174,7 +197,7 @@ class SmartDocDirectories(Dataset):
         
         self.__repr__()
 
-class SelfCollectedDataset(Dataset):
+class SelfCollectedDataset(DatasetBase):
     '''
     Class to include MNIST specific details
     '''
@@ -210,7 +233,7 @@ class SelfCollectedDataset(Dataset):
 
         self.__repr__()
 
-class SmartDocCorner(Dataset):
+class SmartDocCorner(DatasetBase):
     '''
     data - list of strings. path to images. N is the number of files.
     labels - np array Nx2 (x, y). normalized coordinated.
