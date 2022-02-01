@@ -24,66 +24,77 @@ class CornerExtractor():
     def get(self, pil_image):
         with torch.no_grad(): 
             image_array = np.copy(pil_image)
-            # pil_image = Image.fromarray(pil_image) #TODO - why???
-            test_transform = transforms.Compose([transforms.Resize([32, 32]),
-                                                 transforms.ToTensor()])
-            img_temp = test_transform(pil_image)
-
-            img_temp = img_temp.unsqueeze(0)
-            if torch.cuda.is_available():
-                img_temp = img_temp.cuda()
-
-            model_prediction = self.model(img_temp).cpu().data.numpy()[0]
-
-            model_prediction = np.array(model_prediction) #model return normalized coordinates
-
-            x_cords = model_prediction[[0, 2, 4, 6]]
-            y_cords = model_prediction[[1, 3, 5, 7]]
-
-            x_cords = x_cords * image_array.shape[1]
-            y_cords = y_cords * image_array.shape[0]
-
-            # Extract the four corners of the image. Read "Region Extractor" in Section III of the paper for an explanation.
-            top_left = image_array[
-                       max(0, int(2 * y_cords[0] - (y_cords[3] + y_cords[0]) / 2)):int((y_cords[3] + y_cords[0]) / 2),
-                       max(0, int(2 * x_cords[0] - (x_cords[1] + x_cords[0]) / 2)):int((x_cords[1] + x_cords[0]) / 2)]
-
-            top_right = image_array[
-                        max(0, int(2 * y_cords[1] - (y_cords[1] + y_cords[2]) / 2)):int((y_cords[1] + y_cords[2]) / 2),
-                        int((x_cords[1] + x_cords[0]) / 2):min(image_array.shape[1] - 1,
-                                                               int(x_cords[1] + (x_cords[1] - x_cords[0]) / 2))]
-
-            bottom_right = image_array[int((y_cords[1] + y_cords[2]) / 2):min(image_array.shape[0] - 1, int(
-                y_cords[2] + (y_cords[2] - y_cords[1]) / 2)),
-                           int((x_cords[2] + x_cords[3]) / 2):min(image_array.shape[1] - 1,
-                                                                  int(x_cords[2] + (x_cords[2] - x_cords[3]) / 2))]
-
-            bottom_left = image_array[int((y_cords[0] + y_cords[3]) / 2):min(image_array.shape[0] - 1, int(
-                y_cords[3] + (y_cords[3] - y_cords[0]) / 2)),
-                          max(0, int(2 * x_cords[3] - (x_cords[2] + x_cords[3]) / 2)):int(
-                              (x_cords[3] + x_cords[2]) / 2)]
+            tl, tr, br, bl = self.get_coarse_prediction(pil_image)
+            x_center, y_center = [tl[0], tr[0], br[0], bl[0]], [tl[1], tr[1], br[1], bl[1]] #TODO - refactor code to get rid of x_center y_center
+            top_left, top_right, bottom_right, bottom_left = self.extract_corners_patches(image_array, x_center, y_center)
             
             #concatenate crop of image containing the corner with corner's top-left coordinates (with respect to full frame).
-            top_left = (top_left, max(0, int(2 * x_cords[0] - (x_cords[1] + x_cords[0]) / 2)),
-                        max(0, int(2 * y_cords[0] - (y_cords[3] + y_cords[0]) / 2)))
-            top_right = (
-            top_right, int((x_cords[1] + x_cords[0]) / 2), max(0, int(2 * y_cords[1] - (y_cords[1] + y_cords[2]) / 2)))
-            bottom_right = (bottom_right, int((x_cords[2] + x_cords[3]) / 2), int((y_cords[1] + y_cords[2]) / 2))
-            bottom_left = (bottom_left, max(0, int(2 * x_cords[3] - (x_cords[2] + x_cords[3]) / 2)),
-                           int((y_cords[0] + y_cords[3]) / 2))
+            top_left = (top_left, 
+                        max(0, int(2 * x_center[0] - (x_center[1] + x_center[0]) / 2)),
+                        max(0, int(2 * y_center[0] - (y_center[3] + y_center[0]) / 2)))
+            top_right = (top_right, 
+                         int((x_center[1] + x_center[0]) / 2), 
+                         max(0, int(2 * y_center[1] - (y_center[1] + y_center[2]) / 2)))
+            bottom_right = (bottom_right, 
+                            int((x_center[2] + x_center[3]) / 2), 
+                            int((y_center[1] + y_center[2]) / 2))
+            bottom_left = (bottom_left, 
+                           max(0, int(2 * x_center[3] - (x_center[2] + x_center[3]) / 2)),
+                           int((y_center[0] + y_center[3]) / 2))
 
             return top_left, top_right, bottom_right, bottom_left
+
+    # def calculate_region_extractor_coordinates(self):
+
+
+    def extract_corners_patches(self, image_array, x_center, y_center):
+        """ Extract four corners of the image. Read "Region Extractor" in Section III of the paper for an explanation """
+        h = image_array.shape[0]
+        w = image_array.shape[1]
+        top_left = image_array[max(0, int(2 * y_center[0] - (y_center[3] + y_center[0]) / 2))        : int((y_center[3] + y_center[0]) / 2),
+                               max(0, int(2 * x_center[0] - (x_center[1] + x_center[0]) / 2))        : int((x_center[1] + x_center[0]) / 2)]
+
+        top_right = image_array[max(0, int(2 * y_center[1] - (y_center[1] + y_center[2]) / 2))       : int((y_center[1] + y_center[2]) / 2),
+                                int((x_center[1] + x_center[0]) / 2)                                 : min(w - 1, int(x_center[1] + (x_center[1] - x_center[0]) / 2))]
+
+        bottom_right = image_array[int((y_center[1] + y_center[2]) / 2)                              : min(h - 1, int(y_center[2] + (y_center[2] - y_center[1]) / 2)),
+                                   int((x_center[2] + x_center[3]) / 2)                              : min(w - 1, int(x_center[2] + (x_center[2] - x_center[3]) / 2))]
+
+        bottom_left = image_array[int((y_center[0] + y_center[3]) / 2)                               : min(h - 1, int(y_center[3] + (y_center[3] - y_center[0]) / 2)),
+                                      max(0, int(2 * x_center[3] - (x_center[2] + x_center[3]) / 2)) : int((x_center[3] + x_center[2]) / 2)]
+                          
+        return top_left, top_right, bottom_right, bottom_left
+        
+    def get_coarse_prediction(self, pil_image):
+        im = self.prepare_image(pil_image)
+        quad_pred = self.model(im).cpu().data.numpy()[0]    
+        quad_pred = self.denormalize_coordinates(pil_image, quad_pred)
+        return quad_pred
+
+    def denormalize_coordinates(self, pil_image, model_prediction):
+        # model returns normalized coordinates. convert to pixels with respect to full resolution:
+        w, h = pil_image.size
+        x_center = model_prediction[[0, 2, 4, 6]] * w
+        y_center = model_prediction[[1, 3, 5, 7]] * h
+        quad = [[x_center[i], y_center[i]] for i in range(4)]
+        return quad
+
+    def prepare_image(self, pil_image):
+        test_transform = transforms.Compose([transforms.Resize([32, 32]), transforms.ToTensor()]) #TODO - shouldn't it come from dataset definition?
+        im = test_transform(pil_image)
+        im = im.unsqueeze(0)
+        if torch.cuda.is_available():
+            im = im.cuda()
+        return im
     
-    @staticmethod
-    def find_coarse_corner_estimation(corners):
-        """ 
-        each corner is a list of: [np.array of the corner, topleft_x, topleft_y]. 
-        where topleft_x, topleft_y are with respect to full resolution image 
-        """
-        def _cvt_corner(corner):
-            h,w = corner[0].shape[:2]
-            x = int(corner[1] + w/2)
-            y = int(corner[2] + h/2)
-            return [x,y]
-        return [_cvt_corner(corners[0]), _cvt_corner(corners[1]), _cvt_corner(corners[2]), _cvt_corner(corners[3])]
+    def find_qudrilateral(self, pil_image):
+        quad = self.get_coarse_prediction(pil_image)
+        # model can return negative values therefore need to clip it and also integer it:
+        w, h = pil_image.size
+        clip_x = lambda p: max(0, min(p, w))
+        clip_y = lambda p: max(0, min(p, h))
+        quad = [[int(clip_x(quad[i][0])), int(clip_y(quad[i][1]))] for i in range(4)]
+        return quad
+
+
 

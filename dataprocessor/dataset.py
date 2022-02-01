@@ -10,7 +10,7 @@ import xml.etree.ElementTree as ET
 from PIL import Image
 import numpy as np
 from torchvision import transforms
-from torch.utils.data import Dataset
+import torch.utils.data as td
 
 import utils.utils as utils
 
@@ -49,6 +49,7 @@ class SmartDoc(DatasetBase):
         self.test_transform = transforms.Compose([transforms.Resize([32, 32]),
                                                     transforms.ToTensor()])
         logger.info("Pass train/test data paths here")
+        directories = [directories] if isinstance(directories, str) else directories
         for d in directories:
             print (d, "gt.csv")
             with open(os.path.join(d, "gt.csv"), 'r') as csvfile:
@@ -66,12 +67,12 @@ class SmartDoc(DatasetBase):
         
         self.__repr__()
 
-class MyDatasetDoc(Dataset):
+class MyDatasetDoc(td.Dataset):
     '''
     data - list of strings. path to images. N is the number of files.
     labels - np array Nx8 (topleft_x, topleft_y, topright_x, topright_y, botleft_x, botleft_y, botright_x, botright_y). normalized coordinated.
     '''
-    def __init__(self, directories=[]):
+    def __init__(self, d):
         gt_colunms = ['img_name', 'topleft_x', 'topleft_y', 'topright_x', 'topright_y', 'botright_x', 'botright_y', 'botleft_x', 'botleft_y', 'w', 'h', 'ignore']
         self.train_transform = transforms.Compose([transforms.Resize([32, 32]),
                                                     transforms.ColorJitter(1.5, 1.5, 0.9, 0.5),
@@ -79,9 +80,6 @@ class MyDatasetDoc(Dataset):
 
         self.test_transform = transforms.Compose([transforms.Resize([32, 32]),
                                                     transforms.ToTensor()])
-        directories = [directories] if isinstance(directories, str) else directories
-        
-        d = directories[0] #TODO - generalize to take any number of directories
         print (d, "gt.csv")
         with open(os.path.join(d, "gt.csv"), 'r') as csvfile:
             df = pd.read_csv(f'{d}/gt.csv', names=gt_colunms)
@@ -104,13 +102,24 @@ class MyDatasetDoc(Dataset):
             img = self.train_transform(img)
         target = self.labels[index]
         return img, target
+    
+def random_split(dataset, train_cutoff = 0.8):
+    N = len(dataset)
+    N_train = int(train_cutoff*N)
+    N_test = N - N_train
+    train_dataset, test_dataset = td.random_split(dataset, (N_train, N_test))
+    return train_dataset, test_dataset
 
-class MyDatasetCorner(Dataset):
+class MyDatasetCorner(td.Dataset):
     '''
     data - list of strings. path to images. N is the number of files.
     labels - np array Nx2 (x, y). normalized coordinated.
     '''
-    def __init__(self, directories=[]):
+    def __init__(self, d):
+        """
+        d - path to directory containing images and a csv gt file
+        train_cuttoff - float between 0 to 1. the precentage of train samples. 
+        ."""
         gt_colunms = ['img_name', 'corner_type', 'x', 'y', 'w', 'h', 'ignore']
         self.train_transform = transforms.Compose([transforms.Resize([32, 32]),
                                                     transforms.ColorJitter(0.5, 0.5, 0.5, 0.5),
@@ -118,8 +127,6 @@ class MyDatasetCorner(Dataset):
 
         self.test_transform = transforms.Compose([transforms.Resize([32, 32]),
                                                       transforms.ToTensor()])
-        directories = [directories] if isinstance(directories, str) else directories
-        d = directories[0] #TODO - generalize to take any number of directories
         print (d, "gt.csv")
         with open(os.path.join(d, "gt.csv"), 'r') as csvfile:
             df = pd.read_csv(f'{d}/gt.csv', names=gt_colunms)
@@ -243,6 +250,7 @@ class SmartDocCorner(DatasetBase):
         super().__init__("smartdoc")
         self.data = []
         self.labels = []
+        directories = [directories] if isinstance(directories, str) else directories
         for d in directories:
             self.directory = d
             self.train_transform = transforms.Compose([transforms.Resize([32, 32]),

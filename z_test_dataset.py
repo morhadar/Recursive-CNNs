@@ -4,7 +4,6 @@ from dataprocessor.dataset import MyDatasetCorner, SmartDoc, SmartDocCorner
 
 class DataDoc_TestCase(unittest.TestCase):
     def test_init_MyDataset(self):
-        ds = MyDatasetDoc(['/home/mhadar/projects/doc_scanner/data/data_generator/v1'])
         ds = MyDatasetDoc('/home/mhadar/projects/doc_scanner/data/data_generator/v1')
         assert isinstance(ds.myData[0], list)
         assert ds.myData[1].shape[1] == 8
@@ -23,7 +22,6 @@ class DataDoc_TestCase(unittest.TestCase):
 
 class DataCorner_TestCase(unittest.TestCase):
     def test_init_MyDataset(self):
-        ds = MyDatasetCorner(['/home/mhadar/projects/doc_scanner/data/data_generator/v1_corners'])
         ds = MyDatasetCorner('/home/mhadar/projects/doc_scanner/data/data_generator/v1_corners')
         assert isinstance(ds.myData[0], list)
         assert ds.myData[1].shape[1] == 2
