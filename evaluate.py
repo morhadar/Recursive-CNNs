@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 
 from evaluation import QudrilateralFinder, CornerExtractor
 
@@ -45,17 +45,23 @@ if __name__ == '__main__':
         im, quad_true = ds.readimage(i)
         img_name = ds.get_name(i)
         
-        quad_pred_coarse = quadrilateral_finder_coarse.find_qudrilateral(im)
         quad_pred = quadrilateral_finder.find_qudrilateral(im)
+        quad_pred_coarse = quadrilateral_finder.quad_pred_coarse
+        patches_coords = quadrilateral_finder.patches_coords
         
-        oim = Image.fromarray(draw_qudrilateral(quad_pred, np.array(im)))
-        oim = Image.fromarray(draw_qudrilateral(quad_pred_coarse, np.array(oim), color=(0,0,255), thickness=1))
-        oim.save(f'{output_path}/{img_name}{img_suffix}.jpg')
-        iou.append(IOU(quad_true, quad_pred)) #TODO - understand their calcualtion for IOU and what is the difference
+        ImageDraw.Draw(im).polygon(quad_pred, outline='red')
+        ImageDraw.Draw(im).polygon(quad_pred_coarse, outline='blue')
+        [ImageDraw.Draw(im).rectangle(patches_coords[i], outline='green', width=2) for i in range(4)]
+        out_name = f'{output_path}/{img_name}{img_suffix}.jpg'
+        im.save(out_name)
+        iou.append(IOU(quad_true, quad_pred)) #TODO - understand their calcualtion for IOU
         
-        print(f'{img_name} --- iou={iou[-1]:.02f}')
+        print(f'{out_name} --- iou={iou[-1]:.02f}')
         print(quad_pred)
-        assert iou[0] == 0.5267646714661619
+
+        #for debugging refactoring, etc. image is: low-level-camera/00000.jpg
+        assert iou[0] == 0.5232468134613789
+
     #TODO - write log file with all the details.
     #TODO - add timing
     print(np.mean(np.array(iou)))

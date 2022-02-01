@@ -6,7 +6,7 @@ class QudrilateralFinder():
         self.corner_extractor = CornerExtractor(document_model)
         self.corner_refiner = CornerRefiner(corner_model)
         self.retainFactor = retainFactor
-    
+
     def find_qudrilateral(self, im):
         extracted_corners = self.corner_extractor.get(im)
         corner_address = []
@@ -16,4 +16,9 @@ class QudrilateralFinder():
             refined_corner[1] += corner[2]
 
             corner_address.append(tuple(refined_corner))
+        
+        #save intermediate results for visualization:
+        self.quad_pred_coarse = self.corner_extractor.quad_pred
+        self.patches_coords = self.corner_extractor.patches_coords
+
         return corner_address
