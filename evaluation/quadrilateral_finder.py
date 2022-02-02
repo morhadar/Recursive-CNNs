@@ -1,9 +1,9 @@
 import numpy as np
-from evaluation import CornerExtractor, CornerRefiner
+from evaluation import CornersCoarseEstimation, CornerRefiner
 
 class QudrilateralFinder():
     def __init__(self, document_model, corner_model, retainFactor=0.85) -> None:
-        self.corner_extractor = CornerExtractor(document_model)
+        self.corner_extractor = CornersCoarseEstimation(document_model)
         self.corner_refiner = CornerRefiner(corner_model)
         self.retainFactor = retainFactor
 
@@ -17,7 +17,7 @@ class QudrilateralFinder():
 
             corner_address.append(tuple(refined_corner))
         
-        #save intermediate results for visualization:
+        # save intermediate results for visualization:
         self.quad_pred_coarse = self.corner_extractor.quad_pred
         self.patches_coords = self.corner_extractor.patches_coords
 

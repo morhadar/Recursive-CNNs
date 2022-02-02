@@ -1,3 +1,3 @@
-from .corner_extractor import CornerExtractor
+from .corner_extractor import CornersCoarseEstimation
 from .corner_refiner import CornerRefiner
 from .quadrilateral_finder import QudrilateralFinder

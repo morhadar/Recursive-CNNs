@@ -5,7 +5,7 @@ from torchvision import transforms
 import model
 
 
-class CornerExtractor():
+class CornersCoarseEstimation():
     def __init__(self, checkpoint_dir):
         self.model = model.ModelFactory.get_model("resnet", 'document')
         self.model.load_state_dict(torch.load(checkpoint_dir, map_location='cpu'))
@@ -22,6 +22,8 @@ class CornerExtractor():
             tl_patch_coord, tr_patch_coord, br_patch_coord, bl_patch_coord = self.calculate_coordinates_for_patches_extraction(quad_pred)
             tl_patch_coord, tr_patch_coord, br_patch_coord, bl_patch_coord = [self.clip_and_integer_coordinates(i, pil_image.size) for i in (tl_patch_coord, tr_patch_coord, br_patch_coord, bl_patch_coord)]
             top_left_patch, top_right_patch, bottom_right_patch, bottom_left_patch = self.extract_patches_from_image(pil_image, coords=(tl_patch_coord, tr_patch_coord, br_patch_coord, bl_patch_coord))
+            #TODO - this is temporarly just to check model2 by itself.
+            # top_left_patch, top_right_patch, bottom_right_patch, bottom_left_patch = self.slice_image_to_4_patches(pil_image)
 
             # arrange output for the next stage -> the input for the CornerRefiner: tuples of corner_patch with top-left coordinates of the patch with respect to full frame:
             top_left =      (top_left_patch,      tl_patch_coord[0][0], tl_patch_coord[0][1])
@@ -36,9 +38,20 @@ class CornerExtractor():
             return top_left, top_right, bottom_right, bottom_left
 
     @staticmethod
-    def extract_patches_from_image(pil_image, coords):
+    def extract_patches_from_image_by_coordinates(pil_image, coords):
         return [np.array(pil_image.crop((i[0][0], i[0][1], i[1][0], i[1][1]))) for i in coords]
 
+    def slice_image_to_4_patches(self, pil_image):
+        w, h = pil_image.size
+        mid_w, mid_h = w//2, h//2
+        coords = (([0,       0],     [mid_w,  mid_h]), #top-left
+                  ([mid_w,   0],     [w,      mid_h]), #top-right
+                  ([mid_w,   mid_h], [ w,      h]), #bottom-right
+                  ([0,       mid_h], [ mid_w,  h]) #bottom-left
+        )
+        return self.extract_patches_from_image_by_coordinates(pil_image, coords)
+
+        
     # def calculate_region_extractor_coordinates(self):
     def calculate_coordinates_for_patches_extraction(self, quad):
         tl, tr, br, bl = quad

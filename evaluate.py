@@ -2,7 +2,7 @@ import os
 import numpy as np
 from PIL import Image, ImageDraw
 
-from evaluation import QudrilateralFinder, CornerExtractor
+from evaluation import QudrilateralFinder, CornersCoarseEstimation
 
 # imports from my other projects:
 import os, sys
@@ -26,22 +26,25 @@ v2 = [  'v2',
         ]
 
 if __name__ == '__main__':
-    #TODO - convert evaluation to a function
-    v = v2
-    data_type = 'low' #TODO - refactor code to be able to load two datasets together low&high
-    # output_path = f'results/{v[0]}/{data_type}'
-    output_path = 'results/debug'
+    #TODO - convert evaluation to a function??
+    v = v0
+    output_path = f'results/{v[0]}_only/'
+    # output_path = 'results/debug'
     img_suffix = ''
-    data_dir = f'z_ref_doc_scanner/data/self_collected/{data_type}-level-camera/stills/'
+    data_dir1 = f'z_ref_doc_scanner/data/self_collected/low-level-camera/stills/'
+    data_dir2 = f'z_ref_doc_scanner/data/self_collected/high-level-camera/stills/'
     
     os.makedirs(output_path, exist_ok=True)
     
-    ds = Dataset(data_dir, ignore=True)
+    ds1 = Dataset.from_directory(data_dir1, ignore=True)
+    ds2 = Dataset.from_directory(data_dir2, ignore=True)
+    ds = ds1 + ds2
+
     quadrilateral_finder = QudrilateralFinder(v[1], v[2])
-    quadrilateral_finder_coarse = CornerExtractor(v[1])
+    quadrilateral_finder_coarse = CornersCoarseEstimation(v[1])
 
     iou = []
-    for i in [0]:#range(len(ds)):
+    for i in range(len(ds)):
         im, quad_true = ds.readimage(i)
         img_name = ds.get_name(i)
         
@@ -59,8 +62,8 @@ if __name__ == '__main__':
         print(f'{out_name} --- iou={iou[-1]:.02f}')
         print(quad_pred)
 
-        #for debugging refactoring, etc. image is: low-level-camera/00000.jpg
-        assert iou[0] == 0.5232468134613789
+        # next line is for debugging (refactoring, etc). iou belongs to image 'low-level-camera/stills/00000.jpg'
+        # assert iou[0] == 0.5232468134613789
 
     #TODO - write log file with all the details.
     #TODO - add timing
