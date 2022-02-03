@@ -1,14 +1,13 @@
 import os
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import ImageDraw
 
-from evaluation import QudrilateralFinder, CornersCoarseEstimation
-
+from evaluation import QudrilateralFinder
 # imports from my other projects:
 import os, sys
 sys.path.append(os.path.abspath('z_ref_doc_scanner'))  #TODO - why importing fails if i put it under referneces folder?
 from z_ref_doc_scanner.dataset import Dataset
-from z_ref_doc_scanner.utils import draw_qudrilateral, IOU
+from z_ref_doc_scanner.utils import IOU
 
 v0 = [  'v0',
         'results/trained_models/document/22122021_document_smartdoc/nonamedocument_resnet.pb',
@@ -26,45 +25,54 @@ v2 = [  'v2',
         ]
 
 if __name__ == '__main__':
-    #TODO - convert evaluation to a function??
-    v = v0
-    output_path = f'results/{v[0]}_only/'
+    v = v2
+    output_path = f'results/{v[0]}/'
     # output_path = 'results/debug'
     img_suffix = ''
-    data_dir1 = f'z_ref_doc_scanner/data/self_collected/low-level-camera/stills/'
-    data_dir2 = f'z_ref_doc_scanner/data/self_collected/high-level-camera/stills/'
     
     os.makedirs(output_path, exist_ok=True)
     
-    ds1 = Dataset.from_directory(data_dir1, ignore=True)
-    ds2 = Dataset.from_directory(data_dir2, ignore=True)
-    ds = ds1 + ds2
+    ds = Dataset.from_directory(f'z_ref_doc_scanner/data/self_collected/low-level-camera/stills/', ignore=True) + \
+         Dataset.from_directory(f'z_ref_doc_scanner/data/self_collected/high-level-camera/stills/', ignore=True)
 
-    quadrilateral_finder = QudrilateralFinder(v[1], v[2])
-    quadrilateral_finder_coarse = CornersCoarseEstimation(v[1])
+    qf = QudrilateralFinder(v[1], v[2])
+    qf0 = QudrilateralFinder(v0[1], v0[2])
 
     iou = []
+    iou_model2_only = []
     for i in range(len(ds)):
         im, quad_true = ds.readimage(i)
         img_name = ds.get_name(i)
         
-        quad_pred = quadrilateral_finder.find_qudrilateral(im)
-        quad_pred_coarse = quadrilateral_finder.quad_pred_coarse
-        patches_coords = quadrilateral_finder.patches_coords
+        quad_pred = qf.find_quad(im)
+        patches_coords = qf.patches_coords
+        quad_pred_model2_only = qf.find_quad_model2_only(im)
+        quad_coarse = qf.quad_coarse
+        
+        # ImageDraw.Draw(im).polygon(quad_pred, outline='red')
+        # ImageDraw.Draw(im).polygon(quad_pred_model2_only, outline='blue')
         
         ImageDraw.Draw(im).polygon(quad_pred, outline='red')
-        ImageDraw.Draw(im).polygon(quad_pred_coarse, outline='blue')
-        [ImageDraw.Draw(im).rectangle(patches_coords[i], outline='green', width=2) for i in range(4)]
+        ImageDraw.Draw(im).polygon(quad_pred_model2_only, outline='blue')
+        
+        #TODO - results for coarse model only
+        # quad_pred0 = qf0.find_quad(im)
+        # ImageDraw.Draw(im).polygon(quad_coarse, outline='yellow') #TODO - print circles instead
+        # [ImageDraw.Draw(im).rectangle(patches_coords[i], outline='yellow', width=2) for i in range(4)]
+        
         out_name = f'{output_path}/{img_name}{img_suffix}.jpg'
         im.save(out_name)
-        iou.append(IOU(quad_true, quad_pred)) #TODO - understand their calcualtion for IOU
+        #TODO - understand their calcualtion for IOU
+        iou.append(IOU(quad_true, quad_pred))
+        # iou.append(IOU(quad_true, quad_coarse))
+        iou_model2_only.append(IOU(quad_true, quad_pred_model2_only)) 
         
         print(f'{out_name} --- iou={iou[-1]:.02f}')
         print(quad_pred)
 
-        # next line is for debugging (refactoring, etc). iou belongs to image 'low-level-camera/stills/00000.jpg'
+        # next line is for debugging (refactoring, etc). iou[0] belongs to image 'low-level-camera/stills/00000.jpg' with v2 models.
         # assert iou[0] == 0.5232468134613789
-
-    #TODO - write log file with all the details.
+    #TODO - write log file with all the details. ->even better concate it in df and print it to csv
     #TODO - add timing
-    print(np.mean(np.array(iou)))
+    print(f'iou={np.mean(np.array(iou))}')
+    print(f'iou_model2_only={np.mean(np.array(iou_model2_only))}')

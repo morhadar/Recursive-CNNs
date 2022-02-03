@@ -294,3 +294,14 @@ def sort_gt(gt):
     bl = gt[(tl_index + 3) % 4]
 
     return np.asarray((tl, tr, br, bl))
+
+def clip_and_integer_coordinates(quad, im_dimentions):
+    """
+    quad(list[list]): [[x1, y1], [x2, y2], ....]
+    im_dimentions(tuple): w,h 
+    """
+    w, h = im_dimentions
+    clip_x = lambda p: max(0, min(p, w))
+    clip_y = lambda p: max(0, min(p, h))
+    quad = [(int(clip_x(quad[i][0])), int(clip_y(quad[i][1]))) for i in range(len(quad))]
+    return quad

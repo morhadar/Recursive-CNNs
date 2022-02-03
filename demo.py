@@ -37,7 +37,7 @@ if __name__ == "__main__":
     img_name = ds.get_name(4)
     
     qf = QudrilateralFinder(args.documentModel, args.cornerModel, args.retainFactor)
-    quad_pred = qf.find_qudrilateral(im)
+    quad_pred = qf.find_quad(im)
     
     oim = Image.fromarray(draw_qudrilateral(quad_pred, np.array(im)))
     oim.save(f'{output_path}/{img_name}{img_suffix}.jpg')
