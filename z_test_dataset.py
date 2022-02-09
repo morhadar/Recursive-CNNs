@@ -1,10 +1,9 @@
 import unittest
-from PIL import Image
 from torchvision import transforms
 from dataprocessor import MyDatasetDoc
 from dataprocessor.dataset import MyDatasetCorner, SmartDoc, SmartDocCorner
 
-from utils import draw_circle_pil
+from utils import draw_circle_pil, get_concat_h
 
 class DataDoc_TestCase(unittest.TestCase):
     def test_init_MyDataset(self):
@@ -25,12 +24,6 @@ class DataDoc_TestCase(unittest.TestCase):
         ds = SmartDoc()
 
 class DataCorner_TestCase(unittest.TestCase):
-    @staticmethod
-    def get_concat_h(im1, im2):
-        dst = Image.new('RGB', (im1.width + im2.width, max(im1.height, im2.height)))
-        dst.paste(im1, (0, 0))
-        dst.paste(im2, (im1.width, 0))
-        return dst
 
     def test_init_MyDataset(self):
         ds = MyDatasetCorner('/home/mhadar/projects/doc_scanner/data/data_generator/v1_corners')
@@ -56,7 +49,7 @@ class DataCorner_TestCase(unittest.TestCase):
             orig, rotated = trans_to_pil(orig), trans_to_pil(rotated)
             draw_circle_pil(orig, (target_orig * orig.size).astype(int), radious=5, outline='yellow', width=2)
             draw_circle_pil(rotated, (target_rotated * rotated.size).astype(int), radious=5, outline='yellow', width=2)
-            t = self.get_concat_h(orig, rotated)
+            t = get_concat_h(orig, rotated)
 
             t.save(f'results/debug/{i}_rotated.jpg')       
 
