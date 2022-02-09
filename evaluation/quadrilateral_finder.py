@@ -1,13 +1,15 @@
 import numpy as np
+from PIL import Image
 from evaluation import CornersCoarseEstimation, CornerRefiner
-# Path (ugly) hack.
+# (ugly) Path hack.
 import sys, os
 sys.path.insert(0, os.path.abspath('.'))
-from utils import clip_and_integer_coordinates
+from utils import clip_and_integer_coordinates, rotate_translate_point
 
 class QudrilateralFinder():
     def __init__(self, document_model, corner_model, retainFactor=0.85) -> None:
-        self.corner_extractor = CornersCoarseEstimation(document_model)
+        if document_model is not None:
+            self.corner_extractor = CornersCoarseEstimation(document_model)
         self.corner_refiner_model = CornerRefiner(corner_model)
         self.retainFactor = retainFactor #TODO - consider moving retain factor to the init of CornerRefiner
 
@@ -24,6 +26,11 @@ class QudrilateralFinder():
     def find_quad_model2_only(self, pil_image):
         corners_patches = self.slice_image_to_4_patches(pil_image)
         quad_refined = [self.refine_corner(corner) for corner in corners_patches]
+        return quad_refined
+
+    def find_quad_model2_only_by_top_left(self, pil_image):
+        corners_patches = self.slice_image_to_4_patches(pil_image)
+        quad_refined = [self.refine_corner2(corner, corner_type) for corner, corner_type in zip(corners_patches, ('topleft', 'topright', 'botright', 'botleft'))]
         return quad_refined
 
     ##########################################################################
@@ -90,10 +97,29 @@ class QudrilateralFinder():
     ##########################################################################
 
     def refine_corner(self, corner_patch):
-        im_patch, tl_x, tl_y = corner_patch
-        refined_corner = np.array(self.corner_refiner_model.get_location(im_patch, float(self.retainFactor))) 
-        # Converting from local coordinate to global coordinates of the image:
-        refined_corner[0] += tl_x
-        refined_corner[1] += tl_y
-        return tuple(refined_corner)
+        im, tl_x, tl_y = corner_patch
+        corner_xy = np.array(self.corner_refiner_model.get_location(im, float(self.retainFactor))) 
+        corner_xy += (tl_x, tl_y)
+        return tuple(corner_xy)
+    
+    def refine_corner2(self, corner_patch, corner_type):
+        self.angle_to_topleft= {'topleft': 0, 'topright':90, 'botright': 180, 'botleft':-90}
+        im, tl_x, tl_y = corner_patch
+        
+        im_topleft = np.array(Image.fromarray(im).rotate(self.angle_to_topleft[corner_type], expand=True))
+        corner_xy_topleft = np.array(self.corner_refiner_model.get_location(im_topleft, float(self.retainFactor)))
+        
+        self.angle_from_topleft= {'topleft': 0, 'topright':-90, 'botright': 180, 'botleft':90}
+        h,w = im_topleft.shape[:2]
+        corner_xy = np.array(rotate_translate_point(corner_xy_topleft, self.angle_from_topleft[corner_type], (w,h)))
+        
+        #for debugging:
+        # from utils import draw_circle_pil
+        # out1 = Image.fromarray(im_topleft)
+        # draw_circle_pil(out1, corner_xy_topleft, outline='red')
+        # out2 = Image.fromarray(im)
+        # draw_circle_pil(out2, corner_xy, outline='red')
+        
+        corner_xy += (tl_x, tl_y)
+        return tuple(corner_xy)
         

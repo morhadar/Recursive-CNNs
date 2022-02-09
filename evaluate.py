@@ -3,6 +3,7 @@ import numpy as np
 from PIL import ImageDraw
 
 from evaluation import QudrilateralFinder
+from utils import draw_circle_pil
 # imports from my other projects:
 import os, sys
 sys.path.append(os.path.abspath('z_ref_doc_scanner'))  #TODO - why importing fails if i put it under referneces folder?
@@ -28,13 +29,21 @@ v22 = [  'v22',
         'results/trained_models/document/22122021_document_smartdoc/nonamedocument_resnet.pb',
         'results/trained_models/corner/my_corner_v2_Jan31_13-11-58/my_corner_v2_resnet.pb'
         ]
-# def draw_patches_rectangle(im, patches):
-    
+
+v3 = ['v3',
+        None,
+        'results/trained_models/corner/my_corner_v2_topleft_training_Feb07_12-34-53/my_corner_v2_topleft_training_resnet.pb'
+    ]
+
+v33 = ['v3_no_color',
+        None,
+        'results/trained_models/corner/my_corner_v2_topleft_training_no_color_jitter_Feb08_10-28-42/my_corner_v2_topleft_training_no_color_jitter_resnet.pb'
+    ]
 
 if __name__ == '__main__':
-    v = v22
-    # output_path = f'results/{v[0]}/'
-    output_path = 'results/debug'
+    v = v0
+    output_path = f'results/{v[0]}/'
+    # output_path = 'results/debug'
     img_suffix = ''
     
     os.makedirs(output_path, exist_ok=True)
@@ -43,44 +52,36 @@ if __name__ == '__main__':
          Dataset.from_directory(f'z_ref_doc_scanner/data/self_collected/high-level-camera/stills/', ignore=True)
 
     qf = QudrilateralFinder(v[1], v[2])
-    # qf0 = QudrilateralFinder(v0[1], v0[2])
 
     imgs = []
     iou = []
     iou_coarse = []
-    iou_model2_only = []
-    for i in [0]:# range(len(ds)):
+    for i in range(len(ds)):
         im, quad_true = ds.readimage(i)
-        img_name = ds.get_name(i)
         
         quad_pred = qf.find_quad(im)
+        # quad_pred = qf.find_quad_model2_only(im)
+        # quad_pred = qf.find_quad_model2_only_by_top_left(im)
+        
+        im_out = im.copy()
+        ImageDraw.Draw(im_out).polygon(quad_pred, outline='red') 
+        
         patches_coords = qf.patches_coords
-        quad_pred_model2_only = qf.find_quad_model2_only(im)
         quad_coarse = qf.quad_coarse
+        [draw_circle_pil(im_out, xy, radious=10, width=50, outline='yellow') for xy in quad_coarse]
+        patches_coords = [[(coords[0][0] +4, coords[0][1] + 4), (coords[1][0] - 4, coords[1][1] - 4)] for coords in patches_coords] #shrink rectangles for better vizualization
+        [ImageDraw.Draw(im_out).rectangle(patches_coords[i], outline='yellow', width=1) for i in range(4)]
         
-        im_out1 = im.copy()
-        ImageDraw.Draw(im_out1).polygon(quad_pred, outline='red')
-        ImageDraw.Draw(im_out1).polygon(quad_pred_model2_only, outline='blue')
-        
-        im_out2 = im.copy()
-        ImageDraw.Draw(im_out2).polygon(quad_coarse, outline='red') #TODO - draw circles instead of polygon?
-        [ImageDraw.Draw(im_out2).rectangle(patches_coords[i], outline=color, width=1) for i, color in zip(range(4), ('yellow', 'green', 'yellow', 'green'))]
-        # ImageDraw.Draw(im_out2).rectangle(patches_coords[0], outline='red', width=1)
-        # ImageDraw.Draw(im_out2).rectangle(patches_coords[1], outline='blue', width=1)
-        # ImageDraw.Draw(im_out2).rectangle(patches_coords[2], outline='red', width=1)
-        # ImageDraw.Draw(im_out2).rectangle(patches_coords[3], outline='blue', width=1)
-        
+
+        img_name = ds.get_name(i)
         out_name = f'{output_path}/{img_name}{img_suffix}'
-        im_out1.save(f'{out_name}.jpg')
-        im_out2.save(f'{out_name}_coarse.jpg')
+        im_out.save(f'{out_name}.jpg')
         
-        imgs.append(im)
+        imgs.append(im_out)
         iou.append(IOU(quad_true, quad_pred))
         iou_coarse.append(IOU(quad_true, quad_coarse))
-        iou_model2_only.append(IOU(quad_true, quad_pred_model2_only)) 
         
         print(f'{out_name} --- iou={iou[-1]:.02f}')
-        print(quad_pred)
 
         # next line is for debugging (refactoring, etc). iou[0] belongs to image 'low-level-camera/stills/00000.jpg' with v2 models.
         # assert iou[0] == 0.5232468134613789
@@ -93,4 +94,3 @@ if __name__ == '__main__':
     
     print(f'iou={np.mean(np.array(iou))}')
     print(f'iou_coarse={np.mean(np.array(iou_coarse))}')
-    print(f'iou_model2_only={np.mean(np.array(iou_model2_only))}')

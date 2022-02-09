@@ -52,7 +52,7 @@ class CornerRefiner():
 
                 response_up = response
 
-                response_up = response_up * up_scale_factor
+                response_up = response_up * up_scale_factor #normalized_to_pixels
                 y = response_up + (x_start, y_start)
                 x_loc = int(y[0])
                 y_loc = int(y[1])

@@ -1,7 +1,3 @@
-''' Document Localization using Recursive CNN
- Maintainer : Khurram Javed
- Email : kjaved@ualberta.ca '''
-
 import os
 import argparse
 from tqdm import tqdm
@@ -37,22 +33,22 @@ parser.add_argument('--debug', action='store_true', default=True,
                     help='Debug messages')
 parser.add_argument('--seed', type=int, default=2323,
                     help='Seeds values to be used')
-parser.add_argument('--log-interval', type=int, default=5, metavar='N',
-                    help='how many batches to wait before logging training status')
+# parser.add_argument('--log-interval', type=int, default=5, metavar='N',
+#                     help='how many batches to wait before logging training status')
 parser.add_argument('--model-type', default="resnet",
                     help='model type to be used. Example : resnet32, resnet20, densenet, test')
-parser.add_argument('--output-dir', default="results/",
-                    help='Directory to store the results; a new folder "DDMMYYYY" will be created '
-                         'in the specified directory to save the results.')
+# parser.add_argument('--output-dir', default="results/",
+#                     help='Directory to store the results; a new folder "DDMMYYYY" will be created '
+#                          'in the specified directory to save the results.')
 parser.add_argument('--decay', type=float, default=0.00001, help='Weight decay (L2 penalty).')
-parser.add_argument('--epochs', type=int, default=40, help='Number of epochs for trianing')
+parser.add_argument('--epochs', type=int, default=20, help='Number of epochs for trianing')
 # parser.add_argument('--dataset', default="document", help='Dataset to be used; example document, corner')
 parser.add_argument('--loader', default="hdd", 
                     help='Loader to load data; hdd for reading from the hdd and ram for loading all data in the memory')
 parser.add_argument('--name', default="noname", help='Name of the experiment')
 
 # document:
-# data_path = '/media/mhadar/d/data/RecursiveCNN_data/smartdocData_DocTrainC'; dataset_name = 'document'; batch_size=32
+# # data_path = '/media/mhadar/d/data/RecursiveCNN_data/smartdocData_DocTrainC'; dataset_name = 'document'; batch_size=32
 # data_path = '/home/mhadar/projects/doc_scanner/data/data_generator/v1'; dataset_name = 'my_document'; batch_size=32
 # parser.add_argument('--dataset', default = dataset_name, help='Dataset to be used; example document, corner')
 # parser.add_argument("-i", "--data-dirs", nargs='+', default = data_path, help="input Directory of train data")
@@ -66,28 +62,37 @@ parser.add_argument('--dataset', default = dataset_name, help='Dataset to be use
 parser.add_argument("-i", "--data-dirs", nargs='+', default = data_path, help="input Directory of train data")
 parser.add_argument("-v", "--validation-dirs", nargs='+', default = data_path, help="input Directory of val data")
 
+args = parser.parse_args()
 
-args = parser.parse_args() 
-###############
-args.name = args.dataset + '_v2'
+args.output_dir = 'results' #TODO - can I unify directory results and runs? will it make troubles to tensorboard?
+args.output_log = 'runs'
+args.train_cutoff = 0.8
+
+
+is_rotating = True
+args.name = args.dataset + '_v2_topleft_training_no_color_jitter'
+
+# for debug:
+#################################
+args.output_dir = 'results/debug'
+args.output_log = 'results/debug'
+args.train_cutoff = 0.01
+args.epochs = 1
+torch.manual_seed(args.seed)
+args.no_cuda = True #for reproducibility
+#################################
+
+
 ############################################################################################################################################
 ############################################################################################################################################
 ############################################################################################################################################
 
 e = Experiment(args.name, args.output_dir)
-writer = SummaryWriter(log_dir=f'runs/{e.name}')
+writer = SummaryWriter(log_dir=f'{args.output_log}/{e.name}')
 logger = utils.utils.setup_logger(os.path.join(e.out_path, e.name)) #TODO - fix log so I can read it
-
-
-# args.batch_size = batch_size
 
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 kwargs = {'num_workers': 5, 'pin_memory': True} if args.cuda else {}
-
-seed = args.seed
-torch.manual_seed(seed)
-if args.cuda:
-    torch.cuda.manual_seed(seed)
 
 if args.dataset in ['document', 'corner']: #ugly hack to support old code. #TODO - get rid of it
     training_data = dataprocessor.DatasetFactory.get_dataset(args.data_dirs, args.dataset)
@@ -99,12 +104,11 @@ else:
     if args.dataset == 'my_document':
         dataset = MyDatasetDoc(args.data_dirs)
     if args.dataset == 'my_corner':
-        dataset = MyDatasetCorner(args.data_dirs)
-    train_dataset, test_dataset = random_split(dataset)
+        dataset = MyDatasetCorner(args.data_dirs, is_rotating=is_rotating)
+    train_dataset, test_dataset = random_split(dataset, train_cutoff=args.train_cutoff)
 
 train_dataloader = td.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=False, drop_last=True, **kwargs)
 test_dataloader  = td.DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, drop_last=True, **kwargs)
-
 
 myModel = model.ModelFactory.get_model(args.model_type, args.dataset)
 if args.cuda:
@@ -146,13 +150,15 @@ optimizer = torch.optim.SGD(filter(lambda p: p.requires_grad, myModel.parameters
 my_trainer = trainer.Trainer(train_dataloader, myModel, args.cuda, optimizer)
 my_eval = trainer.EvaluatorFactory.get_evaluator("rmse", args.cuda)
 
-for epoch in range(0, args.epochs):
+for epoch in range(args.epochs):
     logger.info("Epoch : %d", epoch)
     my_trainer.update_lr(epoch, args.schedule, args.gammas)
-    lossAvg = my_trainer.train(epoch)
+    lossAvg = my_trainer.train()
     writer.add_scalar('loss/train', lossAvg, epoch)
     lossAvg_test = my_eval.evaluate(my_trainer.model, test_dataloader)
     writer.add_scalar('loss/test', lossAvg_test, epoch)
 
+# next line is for debugging (refactoring, etc). lossAvg belongs for training 'v2_corners' / 'my_document v1
+# assert lossAvg == 0.519621719121933 or lossAvg == 1.5293890237808228
 torch.save(myModel.state_dict(), os.path.join(e.out_path, args.name + "_" + args.model_type+ ".pb"))
 e.store_json()

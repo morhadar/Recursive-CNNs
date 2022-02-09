@@ -295,6 +295,19 @@ def sort_gt(gt):
 
     return np.asarray((tl, tr, br, bl))
 
+def rotate_translate_point(point_xy, angle, im_dimensions):
+    w, h = im_dimensions
+    x, y = point_xy
+    if angle == 0:
+        new_point_xy = x, y
+    if angle == -90:
+        new_point_xy = h-y, x
+    elif angle == 180:
+        new_point_xy = w-x, h-y 
+    elif angle == 90:
+        new_point_xy = y, w-x
+    return new_point_xy
+
 def clip_and_integer_coordinates(quad, im_dimentions):
     """
     quad(list[list]): [[x1, y1], [x2, y2], ....]

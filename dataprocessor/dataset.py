@@ -1,7 +1,3 @@
-''' Document Localization using Recursive CNN
- Maintainer : Khurram Javed
- Email : kjaved@ualberta.ca '''
-
 import csv
 import pandas as pd
 import logging
@@ -19,6 +15,12 @@ import utils.utils as utils
 
 logger = logging.getLogger('iCARL')
 
+def random_split(dataset, train_cutoff = 0.8):
+    N = len(dataset)
+    N_train = int(train_cutoff*N)
+    N_test = N - N_train
+    train_dataset, test_dataset = td.random_split(dataset, (N_train, N_test))
+    return train_dataset, test_dataset
 
 class DatasetBase():
     ''' Base class to represent a Dataset
@@ -80,17 +82,12 @@ class MyDatasetDoc(td.Dataset):
 
         self.test_transform = transforms.Compose([transforms.Resize([32, 32]),
                                                     transforms.ToTensor()])
-        print (d, "gt.csv")
-        with open(os.path.join(d, "gt.csv"), 'r') as csvfile:
-            df = pd.read_csv(f'{d}/gt.csv', names=gt_colunms)
-            df = df.drop(df[df.ignore == 1].index)
-            self.data = list(d +'/'+ df.img_name)
-            df[['topleft_x', 'topright_x', 'botright_x', 'botleft_x']] = df[['topleft_x', 'topright_x', 'botright_x', 'botleft_x']].div(df.w, axis=0)
-            df[['topleft_y', 'topright_y', 'botright_y', 'botleft_y']] = df[['topleft_y', 'topright_y', 'botright_y', 'botleft_y']].div(df.h, axis=0)
-            self.labels = df.drop(['img_name', 'w', 'h', 'ignore'],axis=1).to_numpy()
-        self.myData = [self.data, self.labels]
-
-        self.__repr__()
+        df = pd.read_csv(f'{d}/gt.csv', names=gt_colunms)
+        df = df.drop(df[df.ignore == 1].index)
+        self.data = list(d +'/'+ df.img_name)
+        df[['topleft_x', 'topright_x', 'botright_x', 'botleft_x']] = df[['topleft_x', 'topright_x', 'botright_x', 'botleft_x']].div(df.w, axis=0)
+        df[['topleft_y', 'topright_y', 'botright_y', 'botleft_y']] = df[['topleft_y', 'topright_y', 'botright_y', 'botleft_y']].div(df.h, axis=0)
+        self.target = df.drop(['img_name', 'w', 'h', 'ignore'],axis=1).to_numpy()
 
     def __len__(self):
         return len(self.data)
@@ -100,56 +97,63 @@ class MyDatasetDoc(td.Dataset):
         img = img.convert('RGB') if img.mode == 'L' else img
         if self.train_transform is not None:
             img = self.train_transform(img)
-        target = self.labels[index]
+        target = self.target[index]
         return img, target
     
-def random_split(dataset, train_cutoff = 0.8):
-    N = len(dataset)
-    N_train = int(train_cutoff*N)
-    N_test = N - N_train
-    train_dataset, test_dataset = td.random_split(dataset, (N_train, N_test))
-    return train_dataset, test_dataset
-
 class MyDatasetCorner(td.Dataset):
     '''
     data - list of strings. path to images. N is the number of files.
-    labels - np array Nx2 (x, y). normalized coordinated.
+    target - np array Nx2 (x, y). normalized coordinated.
     '''
-    def __init__(self, d):
+    def __init__(self, d, is_rotating=False):
         """
-        d - path to directory containing images and a csv gt file
-        train_cuttoff - float between 0 to 1. the precentage of train samples. 
-        ."""
+        d - path to directory containing images and a csv gt file.
+        is_rotating(bool) - if True rotate all samples to be topleft corners
+        """
         gt_colunms = ['img_name', 'corner_type', 'x', 'y', 'w', 'h', 'ignore']
         self.train_transform = transforms.Compose([transforms.Resize([32, 32]),
-                                                    transforms.ColorJitter(0.5, 0.5, 0.5, 0.5),
-                                                    transforms.ToTensor()])
+                                                   #transforms.ColorJitter(0.5, 0.5, 0.5, 0.5), #TODO - consider removing this!!! color is a good feature!
+                                                   transforms.ToTensor()])
 
         self.test_transform = transforms.Compose([transforms.Resize([32, 32]),
-                                                      transforms.ToTensor()])
-        print (d, "gt.csv")
-        with open(os.path.join(d, "gt.csv"), 'r') as csvfile:
-            df = pd.read_csv(f'{d}/gt.csv', names=gt_colunms)
-            df = df.drop(df[df.ignore == 1].index)
-            self.data = list(d +'/'+ df.img_name)
-            df[['x']] = df[['x']].div(df.w, axis=0)
-            df[['y']] = df[['y']].div(df.h, axis=0)
-            self.labels = df.drop(['img_name', 'corner_type', 'w', 'h', 'ignore'],axis=1).to_numpy()
-        self.myData = [self.data, self.labels]
+                                                  transforms.ToTensor()])
+        df = pd.read_csv(f'{d}/gt.csv', names=gt_colunms)
+        df = df.drop(df[df.ignore == 1].index)
+        df[['x']] = df[['x']].div(df.w, axis=0)
+        df[['y']] = df[['y']].div(df.h, axis=0)
         
-        self.__repr__()
+        self.df = df
+        self.data = list(d +'/'+ df.img_name)
+        self.target = df.drop(['img_name', 'corner_type', 'w', 'h', 'ignore'],axis=1).to_numpy()
+        
+        self.is_rotating = is_rotating
+        self.rotation_angles_to_be_topleft_corner= {'topleft': 0, 'topright':90, 'botright': 180, 'botleft':-90}
     
     def __len__(self):
         return len(self.data)
     
     def __getitem__(self, index):
-        img = Image.open(self.data[index])
+        img = self.get_pil_image(index)
         img = img.convert('RGB') if img.mode == 'L' else img
+        target = self.target[index]
+        if self.is_rotating:
+            angle = self.rotation_angles_to_be_topleft_corner[self.get_corner_type(index)]
+            new_target_in_pixels = utils.rotate_translate_point(target * img.size, angle, img.size)
+            img = img.rotate(angle, expand=True)
+            target = np.array(new_target_in_pixels) / img.size
         if self.train_transform is not None:
             img = self.train_transform(img)
-        target = self.labels[index]
         return img, target
-
+    
+    def get_name(self, index):
+        return self.data[index]
+    
+    def get_pil_image(self, index):
+        return Image.open(self.get_name(index))
+    
+    def get_corner_type(self, index):
+        return self.df.iloc[index]['corner_type']
+    
 class SmartDocDirectories(DatasetBase):
     '''
     Class to include MNIST specific details

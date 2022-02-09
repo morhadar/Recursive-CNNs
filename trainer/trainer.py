@@ -1,11 +1,3 @@
-''' Pytorch Recursive CNN Trainer
- Authors : Khurram Javed
- Maintainer : Khurram Javed
- Lab : TUKL-SEECS R&D Lab
- Email : 14besekjaved@seecs.edu.pk '''
-
-from __future__ import print_function
-
 import logging
 
 from torch.autograd import Variable
@@ -14,6 +6,7 @@ logger = logging.getLogger('iCARL')
 import torch.nn.functional as F
 import torch
 from tqdm import tqdm
+import numpy as np
 
 
 class GenericTrainer:
@@ -44,28 +37,22 @@ class Trainer(GenericTrainer):
                                  self.current_lr * gammas[temp])
                     self.current_lr *= gammas[temp]
 
-    def train(self, epoch):
+    def train(self):
         self.model.train()
-        lossAvg = None
+        lossAvg = []
         for img, target in tqdm(self.train_iterator):
             if self.cuda:
                 img, target = img.cuda(), target.cuda() #TODO - isn't it already in cuda?
             self.optimizer.zero_grad()
             response = self.model(Variable(img))
-            # print (response[0])
-            # print (target[0])
-            loss = F.mse_loss(response, Variable(target.float()))
-            loss = torch.sqrt(loss)
-            if lossAvg is None:
-                lossAvg = loss
-            else:
-                lossAvg += loss
-            # logger.debug("Cur loss %s", str(loss))
+            loss = torch.sqrt(F.mse_loss(response, Variable(target.float())))
             loss.backward()
             self.optimizer.step()
+            
+            lossAvg.append(loss.item())
 
-        lossAvg /= len(self.train_iterator)
-        logger.info("Avg Loss %s", str((lossAvg).cpu().data.numpy()))
+        lossAvg = np.mean(lossAvg)
+        logger.info(f'Avg Loss {lossAvg:.3f}')
         return lossAvg
 
 
