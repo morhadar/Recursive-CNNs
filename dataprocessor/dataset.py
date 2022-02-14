@@ -112,13 +112,14 @@ class MyDatasetCorner(td.Dataset):
         """
         gt_colunms = ['img_name', 'corner_type', 'x', 'y', 'w', 'h', 'ignore']
         self.train_transform = transforms.Compose([transforms.Resize([32, 32]),
-                                                   #transforms.ColorJitter(0.5, 0.5, 0.5, 0.5), #TODO - consider removing this!!! color is a good feature!
+                                                   transforms.ColorJitter(0.5, 0.5, 0.5, 0.5), #TODO - consider removing this!!! color is a good feature!
                                                    transforms.ToTensor()])
 
         self.test_transform = transforms.Compose([transforms.Resize([32, 32]),
                                                   transforms.ToTensor()])
         df = pd.read_csv(f'{d}/gt.csv', names=gt_colunms)
         df = df.drop(df[df.ignore == 1].index)
+        # df = df.drop(df[df.corner_type != 'topleft'].index) #topleft, topright, botright, botleft #TODO - MAKE IT CONFIGURABLE FROM OUTSIDE!
         df[['x']] = df[['x']].div(df.w, axis=0)
         df[['y']] = df[['y']].div(df.h, axis=0)
         

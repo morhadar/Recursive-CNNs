@@ -21,17 +21,27 @@ def get_concat_v(im1, im2):
 def rr():
     print('gg')
 
-def mesh_imgs(pil_images: list, grid_wh: tuple):
+def mesh_imgs(pil_images: list, grid_wh: tuple, titles=None):
+    #todo - if grid is not given create the most squared grid floor(sqrt(N)) * ceil(sqrt(N)) ?
     assert grid_wh[0]*grid_wh[1] >= len(pil_images), 'grid is too small'
+    titles = titles if titles is not None else ['']*len(pil_images)
+    assert len(titles) == len(pil_images), 'not enough/too many titles'
 
     h_step = max([im.height for im in pil_images])
     w_step = max([im.width for im in pil_images])
     w = w_step * grid_wh[0]
     h = h_step * grid_wh[1]
     dst = Image.new('RGB', (w,h))
+    d = ImageDraw.Draw(dst)
 
-    p_start = itertools.product(range(0, w, w_step), range(0, h, h_step))
-    #TODO - arrange by rows insted of colunms
+    coords_iterator = itertools.product(range(0, w, w_step), range(0, h, h_step)) #TODO - arrange by rows insted of colunms
     for i, im in enumerate(pil_images):
-        dst.paste(im, next(p_start))
+        p_start = next(coords_iterator)
+        dst.paste(im, p_start)
+        d.text(p_start, titles[i]) #TODO - control font size
     return dst
+
+def draw_polygon_pil(im, quad, outline=None, width=1):
+    quad_tmp = list(quad)
+    quad_tmp.append(quad_tmp[0])
+    ImageDraw.Draw(im).line(quad_tmp, fill=outline, width=width)

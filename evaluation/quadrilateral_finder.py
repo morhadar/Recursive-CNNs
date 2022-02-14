@@ -113,7 +113,7 @@ class QudrilateralFinder():
         h,w = im_topleft.shape[:2]
         corner_xy = np.array(rotate_translate_point(corner_xy_topleft, self.angle_from_topleft[corner_type], (w,h)))
         
-        #for debugging:
+        # for debugging:
         # from utils import draw_circle_pil
         # out1 = Image.fromarray(im_topleft)
         # draw_circle_pil(out1, corner_xy_topleft, outline='red')

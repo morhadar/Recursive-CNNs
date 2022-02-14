@@ -255,15 +255,15 @@ def __get_cords(cord, min_start, max_end, size=299, buf=5, random_scale=True):
     return (x_start, int(x_start + size))
 
 
-def setup_logger(path):
+def setup_logger(log_file_name):
     import logging
     logger = logging.getLogger('iCARL')
     logger.setLevel(logging.DEBUG)
 
-    fh = logging.FileHandler(path + ".log")
+    fh = logging.FileHandler(log_file_name)
     fh.setLevel(logging.DEBUG)
 
-    fh2 = logging.FileHandler("../temp.log")
+    fh2 = logging.FileHandler("temp.log")
     fh2.setLevel(logging.DEBUG)
 
     ch = logging.StreamHandler()

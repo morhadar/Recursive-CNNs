@@ -4,7 +4,8 @@ from PIL import ImageDraw
 import pandas as pd
 
 from evaluation import QudrilateralFinder
-from utils import draw_circle_pil, mesh_imgs
+from utils import draw_circle_pil, mesh_imgs, draw_polygon_pil
+
 # imports from my other projects:
 import os, sys
 sys.path.append(os.path.abspath('z_ref_doc_scanner'))  #TODO - why importing fails if i put it under referneces folder?
@@ -21,28 +22,35 @@ v1 = [  'v1',
         'results/trained_models/corner/17122022_corner_mycorners/nonamemy_corner_resnet.pb'
         ]
 
-v2 = [  'v2',
-        'results/trained_models/document/1212022_document_v1/nonamemy_document_resnet.pb',
-        'results/trained_models/corner/my_corner_v2_Jan31_13-11-58/my_corner_v2_resnet.pb'
-        ]
 
-v22 = [  'v22',
+v2_0 = [  'v2_0',
         'results/trained_models/document/22122021_document_smartdoc/nonamedocument_resnet.pb',
         'results/trained_models/corner/my_corner_v2_Jan31_13-11-58/my_corner_v2_resnet.pb'
         ]
 
+v2_1 = [  'v2_1',
+        'results/trained_models/document/1212022_document_v1/nonamemy_document_resnet.pb',
+        'results/trained_models/corner/my_corner_v2_Jan31_13-11-58/my_corner_v2_resnet.pb'
+        ]
+
+v2 = [  'v2',
+        None,
+        'results/trained_models/corner/my_corner_v2_Jan31_13-11-58/my_corner_v2_resnet.pb'
+        ]
+
+v2c = [  'v2c',
+        None,
+        'results/trained_models/corner/v2c_Feb13_13-42-45/v2c_resnet.pb'
+        # 'results/trained_models/corner/v2b_Feb13_10-34-41/v2b_resnet.pb'
+        ]
+
 v3 = ['v3',
         None,
-        'results/trained_models/corner/my_corner_v2_topleft_training_Feb07_12-34-53/my_corner_v2_topleft_training_resnet.pb'
-    ]
-
-v33 = ['v3_no_color',
-        None,
-        'results/trained_models/corner/my_corner_v2_topleft_training_no_color_jitter_Feb08_10-28-42/my_corner_v2_topleft_training_no_color_jitter_resnet.pb'
+        'results/trained_models/corner/v3_Feb14_08-50-21/v3_resnet.pb'
     ]
 
 if __name__ == '__main__':
-    v = v0
+    v = v3
     output_path = f'results/{v[0]}/'
     # output_path = 'results/debug'
     img_suffix = ''
@@ -61,18 +69,20 @@ if __name__ == '__main__':
     for i in range(N):
         im, quad_true = ds.readimage(i)
         
-        quad_pred = qf.find_quad(im)
+        # quad_pred = qf.find_quad(im)
         # quad_pred = qf.find_quad_model2_only(im)
-        # quad_pred = qf.find_quad_model2_only_by_top_left(im)
+        quad_pred = qf.find_quad_model2_only_by_top_left(im)
         
         im_out = im.copy()
-        ImageDraw.Draw(im_out).polygon(quad_pred, outline='red') 
+        draw_polygon_pil(im_out, quad_pred, outline='red', width=3)
         
-        patches_coords = qf.patches_coords
-        quad_coarse = qf.quad_coarse
-        [draw_circle_pil(im_out, xy, radious=10, width=50, outline='yellow') for xy in quad_coarse]
-        patches_coords = [[(coords[0][0] +4, coords[0][1] + 4), (coords[1][0] - 4, coords[1][1] - 4)] for coords in patches_coords] #shrink rectangles for better vizualization
-        [ImageDraw.Draw(im_out).rectangle(patches_coords[i], outline='yellow', width=1) for i in range(4)]
+        # coarse info:
+        # patches_coords = qf.patches_coords
+        # quad_coarse = qf.quad_coarse
+        # [draw_circle_pil(im_out, xy, radious=10, width=50, outline='yellow') for xy in quad_coarse]
+        # patches_coords = [[(coords[0][0] +4, coords[0][1] + 4), (coords[1][0] - 4, coords[1][1] - 4)] for coords in patches_coords] #shrink rectangles for better vizualization
+        # [ImageDraw.Draw(im_out).rectangle(patches_coords[i], outline='yellow', width=1) for i in range(4)]
+        # iou_coarse.append(round(IOU(quad_true, quad_coarse), 2))
         
 
         img_name = ds.get_name(i)
@@ -81,7 +91,6 @@ if __name__ == '__main__':
         
         imgs.append(im_out)
         iou.append(round(IOU(quad_true, quad_pred), 2))
-        iou_coarse.append(round(IOU(quad_true, quad_coarse), 2))
         
         print(f'{out_name} --- iou={iou[-1]:.02f}')
         df.img_name[i] = img_name
@@ -92,14 +101,15 @@ if __name__ == '__main__':
         # assert iou[0] == 0.5232468134613789
     #TODO - add timing
     #TODO - understand their calcualtion for IOU    
-
-    mesh = mesh_imgs(imgs[:29], [5,6]) #TODO - take N1 argument from the dataset
-    mesh_high = mesh_imgs(imgs[30:], [3,4])
+    
+    iou_str = [f'{df.img_name[i]} --- iou={df.iou[i]:.02f}' for i in range(N)]
+    mesh = mesh_imgs(imgs[:29], [5,6], titles=iou_str[:29]) #TODO - instead of writing 29 and 30. take this numbers from dataset.
+    mesh_high = mesh_imgs(imgs[30:], [3,3], titles=iou_str[30:])
     mesh.save(f'{output_path}/all_images.jpg')
     mesh_high.save(f'{output_path}/high_all_images.jpg')
 
-    df.iou[N] = round(np.mean(np.array(iou)), 3)
+    df.iou[N] = round(np.mean(iou), 3)
     df.to_csv(f'{output_path}/summary.csv', float_format='{:,.2f}'.format)
     
     print(f'iou={np.mean(np.array(iou))}')
-    print(f'iou_coarse={np.mean(np.array(iou_coarse))}')
+    # print(f'iou_coarse={np.mean(np.array(iou_coarse))}')

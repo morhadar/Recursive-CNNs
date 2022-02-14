@@ -50,6 +50,15 @@ class Trainer(GenericTrainer):
             self.optimizer.step()
             
             lossAvg.append(loss.item())
+ 
+            # debug img, target:
+            # from utils import draw_circle_pil, mesh_imgs
+            # from torchvision import transforms
+            # trans_to_pil = transforms.ToPILImage()
+            # imgs = [trans_to_pil(img[i]) for i in range(32)]
+            # targets = [target[i].numpy() for i in range(32)]
+            # [draw_circle_pil(im, t * im.size, outline='red', radious=1) for im, t in zip(imgs, targets)]
+            # mesh = mesh_imgs(imgs, [6,6])
 
         lossAvg = np.mean(lossAvg)
         logger.info(f'Avg Loss {lossAvg:.3f}')

@@ -41,7 +41,7 @@ parser.add_argument('--model-type', default="resnet",
 #                     help='Directory to store the results; a new folder "DDMMYYYY" will be created '
 #                          'in the specified directory to save the results.')
 parser.add_argument('--decay', type=float, default=0.00001, help='Weight decay (L2 penalty).')
-parser.add_argument('--epochs', type=int, default=20, help='Number of epochs for trianing')
+parser.add_argument('--epochs', type=int, default=40, help='Number of epochs for trianing')
 # parser.add_argument('--dataset', default="document", help='Dataset to be used; example document, corner')
 parser.add_argument('--loader', default="hdd", 
                     help='Loader to load data; hdd for reading from the hdd and ram for loading all data in the memory')
@@ -65,34 +65,31 @@ parser.add_argument("-v", "--validation-dirs", nargs='+', default = data_path, h
 args = parser.parse_args()
 
 args.output_dir = 'results' #TODO - can I unify directory results and runs? will it make troubles to tensorboard?
-args.output_log = 'runs'
-args.train_cutoff = 0.8
+args.output_tensorboard = 'runs'
+args.train_cutoff = 1
 
 
 is_rotating = True
-args.name = args.dataset + '_v2_topleft_training_no_color_jitter'
+args.name = 'v3'
 
-# for debug:
+########## for debug #############
+# args.output_dir = 'results/debug'
+# args.output_tensorboard = 'results/debug'
+# args.train_cutoff = 0.01
+# args.epochs = 1
+# torch.manual_seed(args.seed)
+# args.no_cuda = True #for reproducibility
 #################################
-args.output_dir = 'results/debug'
-args.output_log = 'results/debug'
-args.train_cutoff = 0.01
-args.epochs = 1
-torch.manual_seed(args.seed)
-args.no_cuda = True #for reproducibility
-#################################
 
+e = Experiment(args.name, args.output_dir, args.output_tensorboard)
+writer = SummaryWriter(e.tensorboard_log_dir)
+logger = utils.utils.setup_logger(e.log_file_name) #TODO - fix log so I can read it
+print(e)
 
-############################################################################################################################################
-############################################################################################################################################
-############################################################################################################################################
-
-e = Experiment(args.name, args.output_dir)
-writer = SummaryWriter(log_dir=f'{args.output_log}/{e.name}')
-logger = utils.utils.setup_logger(os.path.join(e.out_path, e.name)) #TODO - fix log so I can read it
-
+# use_cuda = torch.cuda.is_available()
+# device = torch.device("cuda:0" if use_cuda else "cpu")
 args.cuda = not args.no_cuda and torch.cuda.is_available()
-kwargs = {'num_workers': 5, 'pin_memory': True} if args.cuda else {}
+kwargs = {'num_workers': 3, 'pin_memory': True} if args.cuda else {}
 
 if args.dataset in ['document', 'corner']: #ugly hack to support old code. #TODO - get rid of it
     training_data = dataprocessor.DatasetFactory.get_dataset(args.data_dirs, args.dataset)
@@ -155,8 +152,8 @@ for epoch in range(args.epochs):
     my_trainer.update_lr(epoch, args.schedule, args.gammas)
     lossAvg = my_trainer.train()
     writer.add_scalar('loss/train', lossAvg, epoch)
-    lossAvg_test = my_eval.evaluate(my_trainer.model, test_dataloader)
-    writer.add_scalar('loss/test', lossAvg_test, epoch)
+    # lossAvg_test = my_eval.evaluate(my_trainer.model, test_dataloader)
+    # writer.add_scalar('loss/test', lossAvg_test, epoch)
 
 # next line is for debugging (refactoring, etc). lossAvg belongs for training 'v2_corners' / 'my_document v1
 # assert lossAvg == 0.519621719121933 or lossAvg == 1.5293890237808228
