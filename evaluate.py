@@ -13,40 +13,40 @@ from z_ref_doc_scanner.dataset import Dataset
 from z_ref_doc_scanner.utils import IOU
 
 v0 = [  'v0',
-        'results/trained_models/document/22122021_document_smartdoc/nonamedocument_resnet.pb',
-        'results/trained_models/corner/26122021_corner_smartdoc/nonamecorner_resnet.pb'
+        'trained_models/document/22122021_document_smartdoc/nonamedocument_resnet.pb',
+        'trained_models/corner/26122021_corner_smartdoc/nonamecorner_resnet.pb'
         ]
 
 v1 = [  'v1',
-        'results/trained_models/document/1212022_document_v1/nonamemy_document_resnet.pb',
-        'results/trained_models/corner/17122022_corner_mycorners/nonamemy_corner_resnet.pb'
+        'trained_models/document/1212022_document_v1/nonamemy_document_resnet.pb',
+        'trained_models/corner/17122022_corner_mycorners/nonamemy_corner_resnet.pb'
         ]
 
 
 v2_0 = [  'v2_0',
-        'results/trained_models/document/22122021_document_smartdoc/nonamedocument_resnet.pb',
-        'results/trained_models/corner/my_corner_v2_Jan31_13-11-58/my_corner_v2_resnet.pb'
+        'trained_models/document/22122021_document_smartdoc/nonamedocument_resnet.pb',
+        'trained_models/corner/my_corner_v2_Jan31_13-11-58/my_corner_v2_resnet.pb'
         ]
 
 v2_1 = [  'v2_1',
-        'results/trained_models/document/1212022_document_v1/nonamemy_document_resnet.pb',
-        'results/trained_models/corner/my_corner_v2_Jan31_13-11-58/my_corner_v2_resnet.pb'
+        'trained_models/document/1212022_document_v1/nonamemy_document_resnet.pb',
+        'trained_models/corner/my_corner_v2_Jan31_13-11-58/my_corner_v2_resnet.pb'
         ]
 
 v2 = [  'v2',
         None,
-        'results/trained_models/corner/my_corner_v2_Jan31_13-11-58/my_corner_v2_resnet.pb'
+        'trained_models/corner/my_corner_v2_Jan31_13-11-58/my_corner_v2_resnet.pb'
         ]
 
 v2c = [  'v2c',
         None,
-        'results/trained_models/corner/v2c_Feb13_13-42-45/v2c_resnet.pb'
-        # 'results/trained_models/corner/v2b_Feb13_10-34-41/v2b_resnet.pb'
+        'trained_models/corner/v2c_Feb13_13-42-45/v2c_resnet.pb'
+        # 'trained_models/corner/v2b_Feb13_10-34-41/v2b_resnet.pb'
         ]
 
 v3 = ['v3',
         None,
-        'results/trained_models/corner/v3_Feb14_08-50-21/v3_resnet.pb'
+        'trained_models/corner/v3_Feb14_08-50-21/v3_resnet.pb'
     ]
 
 if __name__ == '__main__':

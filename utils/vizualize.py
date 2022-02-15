@@ -1,5 +1,6 @@
 import itertools
 from PIL import Image, ImageDraw
+from math import ceil, sqrt
 
 def draw_circle_pil(im, xy, radious=5, fill=None, outline=None, width=1):
     x, y = xy #TODO - generalize to list of points
@@ -18,14 +19,12 @@ def get_concat_v(im1, im2):
     dst.paste(im2, (0, im1.height))
     return dst
 
-def rr():
-    print('gg')
-
-def mesh_imgs(pil_images: list, grid_wh: tuple, titles=None):
-    #todo - if grid is not given create the most squared grid floor(sqrt(N)) * ceil(sqrt(N)) ?
-    assert grid_wh[0]*grid_wh[1] >= len(pil_images), 'grid is too small'
-    titles = titles if titles is not None else ['']*len(pil_images)
-    assert len(titles) == len(pil_images), 'not enough/too many titles'
+def mesh_imgs(pil_images: list, grid_wh=None, titles=None):
+    N = len(pil_images)
+    grid_wh = grid_wh if grid_wh is not None else (ceil(sqrt(N)),ceil(sqrt(N)))
+    assert grid_wh[0]*grid_wh[1] >= N, 'grid is too small'
+    titles = titles if titles is not None else ['']*N
+    assert len(titles) == N, 'not enough/too many titles'
 
     h_step = max([im.height for im in pil_images])
     w_step = max([im.width for im in pil_images])

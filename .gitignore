@@ -8,6 +8,7 @@ __pycache__/
 results
 data
 runs
+trained_models
 
 # soft links to my other projects:
 references

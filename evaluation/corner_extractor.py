@@ -18,7 +18,7 @@ class CornersCoarseEstimation():
         self.model.eval()
         self.transform = transforms.Compose([transforms.Resize([32, 32]), transforms.ToTensor()])
               
-        print(f' model parameters: {model.count_parameters(self.model)}')
+        # print(f' model parameters: {model.count_parameters(self.model)}')
 
     def get_prediction(self, pil_image):
         im = self.prepare_image_for_model(pil_image)
