@@ -46,7 +46,9 @@ v2c = [  'v2c',
 
 v3 = ['v3',
         None,
-        'trained_models/corner/v3_Feb14_08-50-21/v3_resnet.pb'
+        'results/v3b_Feb15_13-11-47/v3b_resnet.pb'
+        # 'trained_models/corner/v3_Feb16_11-34-18/v3_resnet.pb' #fixed 80%-20%
+        # 'trained_models/corner/v3_Feb14_08-50-21/v3_resnet.pb' #iou=0.99
     ]
 
 if __name__ == '__main__':
@@ -58,7 +60,9 @@ if __name__ == '__main__':
     os.makedirs(output_path, exist_ok=True)
     
     ds = Dataset.from_directory(f'z_ref_doc_scanner/data/self_collected/low-level-camera/stills/', ignore=True) + \
-         Dataset.from_directory(f'z_ref_doc_scanner/data/self_collected/high-level-camera/stills/', ignore=True)
+         Dataset.from_directory(f'z_ref_doc_scanner/data/self_collected/high-level-camera/stills/', ignore=True) + \
+         Dataset.from_directory('/home/mhadar/projects/doc_scanner/data/data_generator/sandbox')#TODO - this way it not gurnateed to run images from testset. (it will probably include images from trainset as well)
+    
     N = len(ds)
     qf = QudrilateralFinder(v[1], v[2])
 
@@ -67,7 +71,7 @@ if __name__ == '__main__':
     iou_coarse = []
     df = pd.DataFrame(columns=['img_name', 'iou'], index=range(N+1))
     for i in range(N):
-        im, quad_true = ds.readimage(i)
+        im, quad_true = ds.read_sample(i)
         
         # quad_pred = qf.find_quad(im)
         # quad_pred = qf.find_quad_model2_only(im)
@@ -104,9 +108,11 @@ if __name__ == '__main__':
     
     iou_str = [f'{df.img_name[i]} --- iou={df.iou[i]:.02f}' for i in range(N)]
     mesh = mesh_imgs(imgs[:29], [5,6], titles=iou_str[:29]) #TODO - instead of writing 29 and 30. take this numbers from dataset.
-    mesh_high = mesh_imgs(imgs[30:], [3,3], titles=iou_str[30:])
     mesh.save(f'{output_path}/all_images.jpg')
+    mesh_high = mesh_imgs(imgs[30:39], [3,3], titles=iou_str[30:39])
     mesh_high.save(f'{output_path}/high_all_images.jpg')
+    mesh_val = mesh_imgs(imgs[39:], [3,3], titles=iou_str[39:])
+    mesh_val.save(f'{output_path}/val_all_images.jpg')
 
     df.iou[N] = round(np.mean(iou), 3)
     df.to_csv(f'{output_path}/summary.csv', float_format='{:,.2f}'.format)

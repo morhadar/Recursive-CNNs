@@ -263,18 +263,18 @@ def setup_logger(log_file_name):
     fh = logging.FileHandler(log_file_name)
     fh.setLevel(logging.DEBUG)
 
-    fh2 = logging.FileHandler("temp.log")
-    fh2.setLevel(logging.DEBUG)
+    # fh2 = logging.FileHandler("temp.log")
+    # fh2.setLevel(logging.DEBUG)
 
     ch = logging.StreamHandler()
     ch.setLevel(logging.DEBUG)
 
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     fh.setFormatter(formatter)
-    fh2.setFormatter(formatter)
+    # fh2.setFormatter(formatter)
 
     logger.addHandler(fh)
-    logger.addHandler(fh2)
+    # logger.addHandler(fh2)
     logger.addHandler(ch)
     return logger
 

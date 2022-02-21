@@ -7,6 +7,7 @@ from PIL import Image
 import numpy as np
 from torchvision import transforms
 import torch.utils.data as td
+import torch
 
 import utils.utils as utils
 
@@ -14,13 +15,6 @@ import utils.utils as utils
 # Goal : Remove any data specific parameters from the rest of the code
 
 logger = logging.getLogger('iCARL')
-
-def random_split(dataset, train_cutoff = 0.8):
-    N = len(dataset)
-    N_train = int(train_cutoff*N)
-    N_test = N - N_train
-    train_dataset, test_dataset = td.random_split(dataset, (N_train, N_test))
-    return train_dataset, test_dataset
 
 class DatasetBase():
     ''' Base class to represent a Dataset
@@ -105,31 +99,44 @@ class MyDatasetCorner(td.Dataset):
     data - list of strings. path to images. N is the number of files.
     target - np array Nx2 (x, y). normalized coordinated.
     '''
-    def __init__(self, d, is_rotating=False):
+    def __init__(self, df, is_rotating=False) -> None:
+        self.train_transform = transforms.Compose([transforms.Resize([32, 32]),
+                                                   transforms.ColorJitter(0.5, 0.5, 0.5, 0.5),
+                                                   transforms.ToTensor()])
+
+        self.test_transform = transforms.Compose([transforms.Resize([32, 32]),
+                                                  transforms.ToTensor()])
+
+        self.df = df
+        self.data = list(df.directory +'/'+ df.img_name)
+        self.target = df.drop(['directory', 'img_name', 'corner_type', 'w', 'h', 'ignore'],axis=1).to_numpy()
+        
+        self.is_rotating = is_rotating
+        self.rotation_angles_to_be_topleft_corner= {'topleft': 0, 'topright':90, 'botright': 180, 'botleft':-90}
+    
+    @classmethod
+    def from_directory(cls, d, is_rotating=False):
         """
         d - path to directory containing images and a csv gt file.
         is_rotating(bool) - if True rotate all samples to be topleft corners
         """
         gt_colunms = ['img_name', 'corner_type', 'x', 'y', 'w', 'h', 'ignore']
-        self.train_transform = transforms.Compose([transforms.Resize([32, 32]),
-                                                   transforms.ColorJitter(0.5, 0.5, 0.5, 0.5), #TODO - consider removing this!!! color is a good feature!
-                                                   transforms.ToTensor()])
-
-        self.test_transform = transforms.Compose([transforms.Resize([32, 32]),
-                                                  transforms.ToTensor()])
         df = pd.read_csv(f'{d}/gt.csv', names=gt_colunms)
+        df['directory'] = d
         df = df.drop(df[df.ignore == 1].index)
-        # df = df.drop(df[df.corner_type != 'topleft'].index) #topleft, topright, botright, botleft #TODO - MAKE IT CONFIGURABLE FROM OUTSIDE!
+        # df = df.drop(df[df.corner_type != 'topleft'].index) #topleft, topright, botright, botleft
         df[['x']] = df[['x']].div(df.w, axis=0)
         df[['y']] = df[['y']].div(df.h, axis=0)
-        
-        self.df = df
-        self.data = list(d +'/'+ df.img_name)
-        self.target = df.drop(['img_name', 'corner_type', 'w', 'h', 'ignore'],axis=1).to_numpy()
-        
-        self.is_rotating = is_rotating
-        self.rotation_angles_to_be_topleft_corner= {'topleft': 0, 'topright':90, 'botright': 180, 'botleft':-90}
+
+        return cls(df, is_rotating)
     
+    def random_split(self, train_cutoff = 0.8, seed=42):
+        N = len(self)
+        N_train = int(train_cutoff*N)
+        N_test = N - N_train
+        train_dataset, test_dataset = td.random_split(self, (N_train, N_test), generator=torch.Generator().manual_seed(seed))
+        return train_dataset, test_dataset
+   
     def __len__(self):
         return len(self.data)
     

@@ -6,7 +6,7 @@ import torch.utils.data as td
 from torch.utils.tensorboard import SummaryWriter
 
 import dataprocessor
-from dataprocessor.dataset import MyDatasetCorner, MyDatasetDoc, random_split
+from dataprocessor.dataset import MyDatasetCorner, MyDatasetDoc
 from experiment import Experiment
 import model
 import trainer
@@ -66,7 +66,7 @@ args = parser.parse_args()
 
 args.output_dir = 'results' #TODO - can I unify directory results and runs? will it make troubles to tensorboard?
 args.output_tensorboard = 'runs'
-args.train_cutoff = 1
+args.train_cutoff = 0.8
 
 
 is_rotating = True
@@ -101,8 +101,8 @@ else:
     if args.dataset == 'my_document':
         dataset = MyDatasetDoc(args.data_dirs)
     if args.dataset == 'my_corner':
-        dataset = MyDatasetCorner(args.data_dirs, is_rotating=is_rotating)
-    train_dataset, test_dataset = random_split(dataset, train_cutoff=args.train_cutoff)
+        dataset = MyDatasetCorner.from_directory(args.data_dirs, is_rotating=is_rotating)
+    train_dataset, test_dataset = dataset.random_split(args.train_cutoff)
 
 train_dataloader = td.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=False, drop_last=True, **kwargs)
 test_dataloader  = td.DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, drop_last=True, **kwargs)
@@ -152,8 +152,8 @@ for epoch in range(args.epochs):
     my_trainer.update_lr(epoch, args.schedule, args.gammas)
     lossAvg = my_trainer.train()
     writer.add_scalar('loss/train', lossAvg, epoch)
-    # lossAvg_test = my_eval.evaluate(my_trainer.model, test_dataloader)
-    # writer.add_scalar('loss/test', lossAvg_test, epoch)
+    lossAvg_test = my_eval.evaluate(my_trainer.model, test_dataloader)
+    writer.add_scalar('loss/test', lossAvg_test, epoch)
 
 # next line is for debugging (refactoring, etc). lossAvg belongs for training 'v2_corners' / 'my_document v1
 # assert lossAvg == 0.519621719121933 or lossAvg == 1.5293890237808228
