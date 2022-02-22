@@ -86,6 +86,13 @@ class MyDatasetDoc(td.Dataset):
     def __len__(self):
         return len(self.data)
     
+    def random_split(self, train_cutoff = 0.8, seed=42):
+        N = len(self)
+        N_train = int(train_cutoff*N)
+        N_test = N - N_train
+        train_dataset, test_dataset = td.random_split(self, (N_train, N_test), generator=torch.Generator().manual_seed(seed))
+        return train_dataset, test_dataset
+    
     def __getitem__(self, index):
         img = Image.open(self.data[index])
         img = img.convert('RGB') if img.mode == 'L' else img

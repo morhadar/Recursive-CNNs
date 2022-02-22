@@ -48,19 +48,19 @@ parser.add_argument('--loader', default="hdd",
 parser.add_argument('--name', default="noname", help='Name of the experiment')
 
 # document:
-# # data_path = '/media/mhadar/d/data/RecursiveCNN_data/smartdocData_DocTrainC'; dataset_name = 'document'; batch_size=32
-# data_path = '/home/mhadar/projects/doc_scanner/data/data_generator/v1'; dataset_name = 'my_document'; batch_size=32
-# parser.add_argument('--dataset', default = dataset_name, help='Dataset to be used; example document, corner')
-# parser.add_argument("-i", "--data-dirs", nargs='+', default = data_path, help="input Directory of train data")
-# parser.add_argument("-v", "--validation-dirs", nargs='+', default = data_path, help="input Directory of val data")
+# data_path = '/media/mhadar/d/data/RecursiveCNN_data/smartdocData_DocTrainC'; dataset_name = 'document'; batch_size=32
+data_path = '/home/mhadar/projects/doc_scanner/data/data_generator/v1'; dataset_name = 'my_document'; batch_size=32
+parser.add_argument('--dataset', default = dataset_name, help='Dataset to be used; example document, corner')
+parser.add_argument("-i", "--data-dirs", nargs='+', default = data_path, help="input Directory of train data")
+parser.add_argument("-v", "--validation-dirs", nargs='+', default = data_path, help="input Directory of val data")
 
 # corner:
 # data_path = "/media/mhadar/d/data/RecursiveCNN_data/cornerTrain64"; dataset_name = 'corner'; batch_size=32
 # data_path = "/home/mhadar/projects/doc_scanner/data/data_generator/v1_corners"; dataset_name = 'my_corner'; batch_size=32
-data_path = "/home/mhadar/projects/doc_scanner/data/data_generator/v2_corners"; dataset_name = 'my_corner'; batch_size=32
-parser.add_argument('--dataset', default = dataset_name, help='Dataset to be used; example document, corner')
-parser.add_argument("-i", "--data-dirs", nargs='+', default = data_path, help="input Directory of train data")
-parser.add_argument("-v", "--validation-dirs", nargs='+', default = data_path, help="input Directory of val data")
+# data_path = "/home/mhadar/projects/doc_scanner/data/data_generator/v2_corners"; dataset_name = 'my_corner'; batch_size=32
+# parser.add_argument('--dataset', default = dataset_name, help='Dataset to be used; example document, corner')
+# parser.add_argument("-i", "--data-dirs", nargs='+', default = data_path, help="input Directory of train data")
+# parser.add_argument("-v", "--validation-dirs", nargs='+', default = data_path, help="input Directory of val data")
 
 args = parser.parse_args()
 
