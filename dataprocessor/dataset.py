@@ -296,3 +296,38 @@ class SmartDocCorner(DatasetBase):
         self.myData = [self.data, self.labels]
         
         self.__repr__()
+
+class Dataset():
+    def __init__(self, gt) -> None:
+        self.gt = gt
+
+    @classmethod
+    def from_directory(cls, directory, ignore=False):
+        gt_cols = ['img_name', 'topleft_x', 'topleft_y', 'topright_x', 'topright_y', 'botright_x', 'botright_y', 'botleft_x', 'botleft_y', 'w', 'h', 'ignore', 'comment']
+        gt = pd.read_csv(f'{directory}/gt.csv', names=gt_cols)
+        gt['directory'] = directory
+        if ignore:
+            gt = gt.drop(gt[gt.ignore == 1].index).reset_index()
+        return cls(gt)
+
+    def read_sample(self, i):
+        im = Image.open(self.get_im_path(i))
+        tl = self.gt.loc[i, ['topleft_x', 'topleft_y']].to_list()
+        tr = self.gt.loc[i, ['topright_x', 'topright_y']].to_list()
+        br = self.gt.loc[i, ['botright_x', 'botright_y']].to_list()
+        bl = self.gt.loc[i, ['botleft_x', 'botleft_y']].to_list()
+        return im, [tl, tr, br, bl]
+    
+    def get_im_path(self, i):
+        return f"{self.gt.directory[i]}/{self.gt.img_name[i]}"
+
+    def get_name(self, i):
+        name = self.gt.img_name[i]
+        return name[:-4]
+
+    def __len__(self):
+        return len(self.gt)
+
+    def __add__(self, otherDataset):
+        gt = pd.concat([self.gt, otherDataset.gt], ignore_index=True)
+        return Dataset(gt)

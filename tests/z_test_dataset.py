@@ -1,5 +1,8 @@
 import unittest
 from torchvision import transforms
+
+# (Ugly) Path hack. #TODO - get rid of it
+import sys, os; sys.path.insert(0, os.path.abspath('.'))
 from dataprocessor import MyDatasetDoc
 from dataprocessor.dataset import MyDatasetCorner, SmartDoc, SmartDocCorner
 

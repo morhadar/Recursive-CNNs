@@ -1,12 +1,7 @@
-''' Document Localization using Recursive CNN
- Maintainer : Khurram Javed
- Email : kjaved@ualberta.ca '''
-
 import random
-
 import cv2
 import numpy as np
-# import Polygon
+from shapely.geometry import Polygon
 
 def unison_shuffled_copies(a, b):
     assert len(a) == len(b)
@@ -318,3 +313,11 @@ def clip_and_integer_coordinates(quad, im_dimentions):
     clip_y = lambda p: max(0, min(p, h))
     quad = [(int(clip_x(quad[i][0])), int(clip_y(quad[i][1]))) for i in range(len(quad))]
     return quad
+
+def IOU(pol1_xy, pol2_xy):
+    polygon1_shape = Polygon(pol1_xy)
+    polygon2_shape = Polygon(pol2_xy)
+
+    polygon_intersection = polygon1_shape.intersection(polygon2_shape).area
+    polygon_union = polygon1_shape.area + polygon2_shape.area - polygon_intersection
+    return polygon_intersection / polygon_union

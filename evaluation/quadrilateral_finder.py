@@ -1,9 +1,6 @@
 import numpy as np
 from PIL import Image
 from evaluation import CornersCoarseEstimation, CornerRefiner
-# (ugly) Path hack.
-import sys, os
-sys.path.insert(0, os.path.abspath('.'))
 from utils import clip_and_integer_coordinates, rotate_translate_point
 
 class QudrilateralFinder():

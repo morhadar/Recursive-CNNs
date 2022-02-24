@@ -4,13 +4,8 @@ from PIL import ImageDraw
 import pandas as pd
 
 from evaluation import QudrilateralFinder
-from utils import draw_circle_pil, mesh_imgs, draw_polygon_pil
-
-# imports from my other projects:
-import os, sys
-sys.path.append(os.path.abspath('z_ref_doc_scanner'))  #TODO - why importing fails if i put it under referneces folder?
-from z_ref_doc_scanner.dataset import Dataset
-from z_ref_doc_scanner.utils import IOU
+from utils import draw_circle_pil, mesh_imgs, draw_polygon_pil, IOU
+from dataprocessor import Dataset
 
 v0 = [  'v0',
         'trained_models/document/22122021_document_smartdoc/nonamedocument_resnet.pb',
@@ -35,7 +30,9 @@ v2_1 = [  'v2_1',
 
 v2 = [  'v2',
         None,
-        'trained_models/corner/my_corner_v2_Jan31_13-11-58/my_corner_v2_resnet.pb'
+        # 'trained_models/corner/my_corner_v2_Jan31_13-11-58/my_corner_v2_resnet.pb'
+        '/home/mhadar/projects/doc_scanner/results/v2_corner_Feb23_15-16-51/v2_corner_resnet.pb'
+        # 'trained_models/corner/v3_Feb14_08-50-21/v3_resnet.pb'
         ]
 
 v2c = [  'v2c',
@@ -46,7 +43,7 @@ v2c = [  'v2c',
 
 v3 = ['v3',
         None,
-        'results/v3b_Feb15_13-11-47/v3b_resnet.pb'
+        'trained_models/corner/v3b_Feb15_13-11-47/v3b_resnet.pb'
         # 'trained_models/corner/v3_Feb16_11-34-18/v3_resnet.pb' #fixed 80%-20%
         # 'trained_models/corner/v3_Feb14_08-50-21/v3_resnet.pb' #iou=0.99
     ]
@@ -59,9 +56,9 @@ if __name__ == '__main__':
     
     os.makedirs(output_path, exist_ok=True)
     
-    ds = Dataset.from_directory(f'z_ref_doc_scanner/data/self_collected/low-level-camera/stills/', ignore=True) + \
-         Dataset.from_directory(f'z_ref_doc_scanner/data/self_collected/high-level-camera/stills/', ignore=True) + \
-         Dataset.from_directory('/home/mhadar/projects/doc_scanner/data/data_generator/sandbox')#TODO - this way it not gurnateed to run images from testset. (it will probably include images from trainset as well)
+    ds = Dataset.from_directory(f'/home/mhadar/projects/doc_scanner/data/self_collected/high-level-camera/stills', ignore=True) + \
+         Dataset.from_directory(f'/home/mhadar/projects/doc_scanner/data/self_collected/low-level-camera/stills', ignore=True)
+        #  Dataset.from_directory('/home/mhadar/projects/doc_scanner/data/data_generator/sandbox')#TODO - this way it not gurnateed to run images from testset. (it will probably include images from trainset as well)
     
     N = len(ds)
     qf = QudrilateralFinder(v[1], v[2])
@@ -96,7 +93,7 @@ if __name__ == '__main__':
         imgs.append(im_out)
         iou.append(round(IOU(quad_true, quad_pred), 2))
         
-        print(f'{out_name} --- iou={iou[-1]:.02f}')
+        print(f'{out_name} --- iou={iou[-1]:.02f} -- {quad_pred}')
         df.img_name[i] = img_name
         df.iou[i] = iou[-1]
 
